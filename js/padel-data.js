@@ -24,6 +24,14 @@ const VENUES = [
     name: "Plus Padel Indoor",
     address: "Av. del Carrilet, 219, 08907 L'Hospitalet de Llobregat, Barcelona, Spain",
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Plus+Padel+Indoor+Av.+del+Carrilet+219+L%27Hospitalet+de+Llobregat",
+    website: "https://www.pluspadelindoor.com",
+    instagram: "pluspadelindoor",
+    email: "pluspadelindoor@gmail.com",
+    amenities: ["Bar", "Shop", "Gym"],
+    photos: [
+      { src: "assets/venues/plus-padel-indoor-exterior.jpg", alt: "Plus Padel Indoor storefront" },
+      { src: "assets/venues/plus-padel-indoor-courts.jpg", alt: "Plus Padel Indoor courts" }
+    ],
     defaultPriceNote: "90 min session"
   }
 ];

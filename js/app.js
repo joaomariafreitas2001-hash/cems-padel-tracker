@@ -27,7 +27,9 @@ const LS_KEYS = {
   DELETED_PLAYERS: "cemspadel_deletedPlayers_v1", // [playerId, ...] hidden from roster (seed + custom)
   ARCHIVED_SESSIONS: "cemspadel_archivedSessions_v1", // [ sessionSnapshot, ... ] History tab
   LIVE_SESSION: "cemspadel_liveSession_v1",       // current week object after first "set up next week"
-  SESSION_PHASE: "cemspadel_sessionPhase_v1"      // { status: "live"|"waiting", nextDateISO?, lastTemplate?, seedRetired? }
+  SESSION_PHASE: "cemspadel_sessionPhase_v1",     // { status: "live"|"waiting", nextDateISO?, lastTemplate?, seedRetired? }
+  PREFERRED_VENUE_ID: "cemspadel_preferredVenueId_v1", // last venue chosen in Admin
+  SAVED_VENUES: "cemspadel_savedVenues_v1"        // venues used before, kept in the selector
 };
 
 /** Club organizer password for the Admin view (client-side gate only). */
@@ -171,23 +173,146 @@ function getPlayerById(id) {
 }
 
 function getVenueById(id) {
-  return VENUES.find(v => v.id === id) || null;
+  if (!id) return null;
+  const seed = VENUES.find(v => v.id === id);
+  if (seed) return seed;
+  const saved = readJSON(LS_KEYS.SAVED_VENUES, []);
+  return saved.find(v => v.id === id) || null;
+}
+
+/** Seed venues plus any venues saved after first use (preferred stays selected). */
+function getSelectableVenues() {
+  const byId = new Map();
+  readJSON(LS_KEYS.SAVED_VENUES, []).forEach(v => {
+    if (v && v.id) byId.set(v.id, { ...v });
+  });
+  // Seed data wins (photos, contact) for known clubs
+  VENUES.forEach(v => byId.set(v.id, { ...(byId.get(v.id) || {}), ...v }));
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getPreferredVenueId() {
+  return localStorage.getItem(LS_KEYS.PREFERRED_VENUE_ID) || "";
+}
+
+function setPreferredVenueId(venueId) {
+  if (venueId) localStorage.setItem(LS_KEYS.PREFERRED_VENUE_ID, venueId);
+  else localStorage.removeItem(LS_KEYS.PREFERRED_VENUE_ID);
+}
+
+/** Persist a venue into the Admin selector after it is used once. */
+function rememberVenue(fields) {
+  const name = String(fields.venueName || fields.name || "").trim();
+  if (!name) return null;
+
+  let id = String(fields.venueId || "").trim();
+  if (!id) {
+    id = "venue-custom-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  }
+
+  const preset = getVenueById(id) || VENUES.find(v => v.name.toLowerCase() === name.toLowerCase());
+  const entry = {
+    id: preset ? preset.id : id,
+    name,
+    address: String(fields.venueAddress || fields.address || "").trim(),
+    mapsUrl: String(fields.mapsUrl || "").trim(),
+    website: (preset && preset.website) || fields.website || "",
+    instagram: (preset && preset.instagram) || fields.instagram || "",
+    email: (preset && preset.email) || fields.email || "",
+    amenities: (preset && preset.amenities) || fields.amenities || [],
+    photos: (preset && preset.photos) || fields.photos || [],
+    lastUsedAt: nowISO()
+  };
+
+  const saved = readJSON(LS_KEYS.SAVED_VENUES, []).filter(v => v.id !== entry.id);
+  saved.unshift(entry);
+  writeJSON(LS_KEYS.SAVED_VENUES, saved);
+  setPreferredVenueId(entry.id);
+  return entry.id;
 }
 
 /** Resolve display venue for a session: custom Admin fields win over preset venueId. */
 function resolveSessionVenue(session) {
-  if (!session) return { name: "", address: "", mapsUrl: "" };
-  const preset = session.venueId ? getVenueById(session.venueId) : null;
+  if (!session) {
+    return { name: "", address: "", mapsUrl: "", photos: [], website: "", instagram: "", email: "", amenities: [] };
+  }
+  const preferredId = session.venueId || getPreferredVenueId();
+  const preset = preferredId ? getVenueById(preferredId) : null;
+  const matchedByName = (!preset && session.venueName)
+    ? getSelectableVenues().find(v => v.name.toLowerCase() === String(session.venueName).trim().toLowerCase())
+    : null;
+  const base = preset || matchedByName;
   const name = (session.venueName && String(session.venueName).trim())
-    || (preset && preset.name)
+    || (base && base.name)
     || "";
   const address = (session.venueAddress && String(session.venueAddress).trim())
-    || (preset && preset.address)
+    || (base && base.address)
     || "";
   const mapsUrl = (session.mapsUrl && String(session.mapsUrl).trim())
-    || (preset && preset.mapsUrl)
+    || (base && base.mapsUrl)
     || "";
-  return { name, address, mapsUrl };
+  return {
+    id: (session.venueId || (base && base.id) || ""),
+    name,
+    address,
+    mapsUrl,
+    website: (base && base.website) || "",
+    instagram: (base && base.instagram) || "",
+    email: (base && base.email) || "",
+    amenities: (base && base.amenities) || [],
+    photos: (base && base.photos) || []
+  };
+}
+
+function venuePhotosHtml(venue) {
+  const photos = (venue && venue.photos) || [];
+  if (!photos.length) return "";
+  return `
+    <div class="venue-photos" aria-label="Venue photos">
+      ${photos.map(p => `
+        <figure class="venue-photo">
+          <img src="${escHtml(p.src)}" alt="${escHtml(p.alt || venue.name || "Venue")}" loading="lazy">
+        </figure>`).join("")}
+    </div>`;
+}
+
+function venueContactHtml(venue) {
+  if (!venue) return "";
+  const bits = [];
+  if (venue.website) {
+    bits.push(`<a href="${escHtml(venue.website)}" target="_blank" rel="noopener">Website</a>`);
+  }
+  if (venue.instagram) {
+    const handle = String(venue.instagram).replace(/^@/, "");
+    bits.push(`<a href="https://instagram.com/${escHtml(handle)}" target="_blank" rel="noopener">@${escHtml(handle)}</a>`);
+  }
+  if (venue.email) {
+    bits.push(`<a href="mailto:${escHtml(venue.email)}">${escHtml(venue.email)}</a>`);
+  }
+  const amenities = (venue.amenities || []).length
+    ? `<p class="venue-amenities muted">${escHtml(venue.amenities.join(" · "))}</p>`
+    : "";
+  if (!bits.length && !amenities) return "";
+  return `
+    <div class="venue-contact">
+      ${bits.length ? `<p class="venue-links">${bits.join(" · ")}</p>` : ""}
+      ${amenities}
+    </div>`;
+}
+
+function venueSelectHtml(selectedId) {
+  const preferred = selectedId || getPreferredVenueId() || (VENUES[0] && VENUES[0].id) || "";
+  const venues = getSelectableVenues();
+  return `
+    <label for="admin-venue-preset">Venue selection</label>
+    <select id="admin-venue-preset" name="venuePreset">
+      <option value="">Custom (type below)</option>
+      ${venues.map(v => `
+        <option value="${escHtml(v.id)}" ${v.id === preferred ? "selected" : ""}>${escHtml(v.name)}</option>
+      `).join("")}
+    </select>
+    <input type="hidden" id="admin-venue-id" name="venueId" value="${escHtml(preferred)}">
+    <p class="muted" style="margin-top:-0.35rem;margin-bottom:0.75rem">Venues you use are kept here for next time.</p>`;
 }
 
 function getAllSessionsSorted() {
@@ -886,6 +1011,7 @@ function renderHome() {
       <div class="hero-card">
         <p class="eyebrow">${escHtml(session.weekLabel || "This week")}</p>
         <h2 class="hero-title">${venue.name ? escHtml(venue.name) : "Venue TBD"}</h2>
+        ${venuePhotosHtml(venue)}
         <dl class="session-facts">
           <div><dt>Date</dt><dd>${escHtml(formatDate(session.dateISO))}</dd></div>
           <div><dt>Time</dt><dd>${escHtml(session.time || "TBD")}</dd></div>
@@ -893,6 +1019,7 @@ function renderHome() {
           <div><dt>Price</dt><dd>${session.pricePerPerson ? `&euro;${escHtml(session.pricePerPerson)} / person` : "TBD"}${session.courtTotalPrice ? ` <span class="muted">(&euro;${escHtml(session.courtTotalPrice)} total court)</span>` : ""}</dd></div>
           <div><dt>Courts</dt><dd>${escHtml(courtsLine || "TBD")}</dd></div>
         </dl>
+        ${venueContactHtml(venue)}
         ${session.notes ? `<p class="session-notes">${escHtml(session.notes)}</p>` : ""}
         ${session.whatsappUrl ? `<a class="btn btn-ghost" href="${escHtml(session.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp group</a>` : ""}
       </div>
@@ -1255,6 +1382,8 @@ function renderAdmin() {
         <h3>Set up next week</h3>
         <p class="muted">Home is showing &ldquo;See you in 2 weeks&rdquo; until you publish the next Thursday (${escHtml(phase.nextWeekLabel || nextDate)}).</p>
 
+        ${venueSelectHtml(tpl.venueId || getPreferredVenueId())}
+
         <label for="admin-venue-name">Venue name</label>
         <input id="admin-venue-name" name="venueName" type="text" required maxlength="120" placeholder="e.g. Plus Padel Indoor" value="${escHtml(setupVenue.name)}">
 
@@ -1297,6 +1426,7 @@ function renderAdmin() {
     sessionForm = `
       <form id="admin-form" class="card stacked-form">
         <h3>Edit this week</h3>
+        ${venueSelectHtml(session.venueId || getPreferredVenueId())}
         <label for="admin-venue-name">Venue name</label>
         <input id="admin-venue-name" name="venueName" type="text" required maxlength="120" placeholder="e.g. Drop Shot Padel Club" value="${escHtml(venue.name)}">
 
@@ -1416,15 +1546,50 @@ function renderAdmin() {
 
 function attachAdminHandlers() {
   const session = getCurrentSession();
+
+  const fillVenueFields = venue => {
+    if (!venue) return;
+    const name = document.getElementById("admin-venue-name");
+    const address = document.getElementById("admin-venue-address");
+    const maps = document.getElementById("admin-maps-url");
+    const idInput = document.getElementById("admin-venue-id");
+    if (name) name.value = venue.name || "";
+    if (address) address.value = venue.address || "";
+    if (maps) maps.value = venue.mapsUrl || "";
+    if (idInput) idInput.value = venue.id || "";
+  };
+
+  const preset = document.getElementById("admin-venue-preset");
+  if (preset) {
+    preset.addEventListener("change", () => {
+      const id = preset.value;
+      const idInput = document.getElementById("admin-venue-id");
+      if (!id) {
+        if (idInput) idInput.value = "";
+        return;
+      }
+      const venue = getVenueById(id);
+      if (venue) {
+        fillVenueFields(venue);
+        setPreferredVenueId(venue.id);
+      }
+    });
+  }
+
   const form = document.getElementById("admin-form");
   if (form && session) {
     form.addEventListener("submit", e => {
       e.preventDefault();
       const fd = new FormData(form);
-      setSessionOverride(session.id, {
+      const venueFields = {
+        venueId: (fd.get("venueId") || "").toString().trim(),
         venueName: (fd.get("venueName") || "").toString().trim(),
         venueAddress: (fd.get("venueAddress") || "").toString().trim(),
-        mapsUrl: (fd.get("mapsUrl") || "").toString().trim(),
+        mapsUrl: (fd.get("mapsUrl") || "").toString().trim()
+      };
+      venueFields.venueId = rememberVenue(venueFields) || venueFields.venueId;
+      setSessionOverride(session.id, {
+        ...venueFields,
         dateISO: fd.get("dateISO") || session.dateISO,
         time: fd.get("time") || session.time,
         pricePerPerson: fd.get("pricePerPerson") ? Number(fd.get("pricePerPerson")) : session.pricePerPerson,
@@ -1454,6 +1619,14 @@ function attachAdminHandlers() {
         `Save this week to History${n ? ` (${n} player${n === 1 ? "" : "s"})` : ""} and show "See you in 2 weeks" on Home?`
       );
       if (!ok) return;
+      if (session) {
+        rememberVenue({
+          venueId: session.venueId,
+          venueName: session.venueName,
+          venueAddress: session.venueAddress,
+          mapsUrl: session.mapsUrl
+        });
+      }
       const result = archiveCurrentWeekToHistory();
       const status = document.getElementById("archive-status");
       if (!result.ok) {
@@ -1470,10 +1643,15 @@ function attachAdminHandlers() {
     nextWeekForm.addEventListener("submit", e => {
       e.preventDefault();
       const fd = new FormData(nextWeekForm);
-      activateNextWeek({
+      const venueFields = {
+        venueId: (fd.get("venueId") || "").toString().trim(),
         venueName: (fd.get("venueName") || "").toString().trim(),
         venueAddress: (fd.get("venueAddress") || "").toString().trim(),
-        mapsUrl: (fd.get("mapsUrl") || "").toString().trim(),
+        mapsUrl: (fd.get("mapsUrl") || "").toString().trim()
+      };
+      venueFields.venueId = rememberVenue(venueFields) || venueFields.venueId;
+      activateNextWeek({
+        ...venueFields,
         dateISO: fd.get("dateISO"),
         time: fd.get("time"),
         pricePerPerson: fd.get("pricePerPerson") ? Number(fd.get("pricePerPerson")) : "",
@@ -1572,6 +1750,15 @@ window.addEventListener("hashchange", () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Keep the club's usual venue in the Admin selector after first use / seed.
+  if (!getPreferredVenueId()) {
+    const session = getCurrentSession();
+    const seedId = (session && session.venueId) || (VENUES[0] && VENUES[0].id) || "";
+    if (seedId) {
+      const v = getVenueById(seedId);
+      if (v) rememberVenue(v);
+    }
+  }
   initNav();
   const view = currentViewFromHash();
   renderView(view);

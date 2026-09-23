@@ -1,0 +1,16 @@
+---
+description: Always sync from GitHub before editing so remote changes are not overwritten
+alwaysApply: true
+---
+
+# Sync GitHub before edits
+
+Before changing any project files (code, data, assets, config):
+
+1. `git fetch origin` and check `git status` / `git log HEAD..origin/main` (or the current branch’s upstream).
+2. If the local branch is behind remote, `git pull --ff-only` (or merge/rebase only if ff-only is not possible and the user asked).
+3. Re-read the files you will edit from disk after pull so you work on the latest content.
+4. Never overwrite or delete remote changes by pushing a stale local copy. If there are divergent local and remote commits, stop and reconcile with the user before forcing anything.
+5. Do not use destructive git commands (`push --force`, hard reset) unless the user explicitly asks.
+
+This applies every time work resumes on this repo, including mid-conversation after the user may have edited on GitHub.

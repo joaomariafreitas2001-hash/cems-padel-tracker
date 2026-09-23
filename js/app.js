@@ -1243,7 +1243,7 @@ function attachBalanceHandlers() {
   const session = getCurrentSession();
   if (!session) return;
   const attendees = (session.attendeeIds || []).map(id => getPlayerById(id)).filter(Boolean);
-  const courts = session.courts || 1;
+  const courts = Math.max(1, Number(session.courts) || 3);
   const status = document.getElementById("balance-status");
 
   const persistCurrentGrid = groups => {

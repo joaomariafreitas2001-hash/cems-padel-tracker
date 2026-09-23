@@ -42,6 +42,28 @@ function setAdminUnlocked(unlocked) {
   }
 }
 
+/* ============================== Cache / storage migration ============================== */
+
+/** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
+const STORAGE_EPOCH = "3";
+(function migrateStorageEpoch() {
+  try {
+    const key = "cemspadel_storageEpoch_v1";
+    if (localStorage.getItem(key) === STORAGE_EPOCH) return;
+    [
+      "cemspadel_sessionOverrides_v1",
+      "cemspadel_sessionOverrides_v2",
+      "cemspadel_attendance_v1",
+      "cemspadel_attendance_v2",
+      "cemspadel_groupings_v1",
+      "cemspadel_myPlayerId_v1"
+    ].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(key, STORAGE_EPOCH);
+  } catch (e) {
+    console.warn("cemspadel: storage migration failed", e);
+  }
+})();
+
 /* ============================== Utilities ============================== */
 
 /** Escape a user-entered string before inserting into innerHTML. */

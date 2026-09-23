@@ -30,10 +30,10 @@ const VENUES = [
 
 // Roster: Name, Level, Nationality, Home School, Year
 const PLAYERS = [
-  { id: "p-joao", name: "João Rawes Freitas", level: 3, active: true, nationality: "Portuguese", homeSchool: "ESADE", year: "2nd" },
-  { id: "p-chris", name: "Chris Imhoff", level: 2, active: true, nationality: "German", homeSchool: "ESADE", year: "1st" },
-  { id: "p-mark", name: "Mark Erhan", level: 2, active: true, nationality: "German", homeSchool: "SSE", year: "2nd" },
-  { id: "p-matteo", name: "Matteo Guardamagna", level: 3, active: true, nationality: "Italian", homeSchool: "ESADE", year: "2nd" }
+  { id: "p-joao", name: "João Rawes Freitas", level: 3, active: true, nationality: "Portuguese", homeSchool: "ESADE" },
+  { id: "p-chris", name: "Chris Imhoff", level: 2, active: true, nationality: "German", homeSchool: "ESADE" },
+  { id: "p-mark", name: "Mark Erhan", level: 2, active: true, nationality: "German", homeSchool: "SSE" },
+  { id: "p-matteo", name: "Matteo Guardamagna", level: 3, active: true, nationality: "Italian", homeSchool: "ESADE" }
 ];
 
 // Only the live week is seeded. History stays empty until real past weeks are added.

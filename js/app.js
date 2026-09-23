@@ -45,7 +45,7 @@ function setAdminUnlocked(unlocked) {
 /* ============================== Cache / storage migration ============================== */
 
 /** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
-const STORAGE_EPOCH = "4";
+const STORAGE_EPOCH = "5";
 (function migrateStorageEpoch() {
   try {
     const key = "cemspadel_storageEpoch_v1";
@@ -215,7 +215,6 @@ function addCustomPlayer(fields) {
     level: Number(fields.level) || 2,
     nationality: String(fields.nationality || "").trim(),
     homeSchool: String(fields.homeSchool || "").trim(),
-    year: String(fields.year || "").trim(),
     active: true,
     notes: String(fields.notes || "").trim(),
     levelUpdatedAt: nowISO()
@@ -225,7 +224,7 @@ function addCustomPlayer(fields) {
 }
 
 function playerMetaLine(p) {
-  return [p.nationality, p.homeSchool, p.year].filter(Boolean).join(" · ");
+  return [p.nationality, p.homeSchool].filter(Boolean).join(" · ");
 }
 
 /** Remove a player from the roster (Admin). Seed players are hidden via DELETED_PLAYERS. */
@@ -753,7 +752,7 @@ function renderPlayers() {
     <section class="view view-players">
       <div class="view-header">
         <h2>Players &amp; Levels</h2>
-        <p class="muted">View-only roster (Name, Level, Nationality, Home School, Year). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
+        <p class="muted">View-only roster (Name, Level, Nationality, Home School). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
       </div>
 
       <div class="level-legend card">
@@ -776,7 +775,6 @@ function renderPlayers() {
                 <th>Level</th>
                 <th>Nationality</th>
                 <th>Home School</th>
-                <th>Year</th>
               </tr>
             </thead>
             <tbody>
@@ -800,7 +798,6 @@ function renderPlayerRow(p) {
       <td>${levelBadge(p.level, { short: true })}</td>
       <td>${escHtml(p.nationality || "-")}</td>
       <td>${escHtml(p.homeSchool || "-")}</td>
-      <td>${escHtml(p.year || "-")}</td>
     </tr>`;
 }
 
@@ -811,7 +808,7 @@ function renderAdminPlayerRow(p) {
         <span class="name-cell">${nameBadgesHtml(p)}<span class="player-name">${escHtml(p.name)}</span></span>
         ${levelBadge(p.level, { short: true })}
       </div>
-      <p class="player-notes muted">${escHtml(playerMetaLine(p) || "No nationality / school / year yet")}</p>
+      <p class="player-notes muted">${escHtml(playerMetaLine(p) || "No nationality / school yet")}</p>
       <div class="player-row-controls">
         <label class="visually-hidden" for="level-select-${escHtml(p.id)}">Level for ${escHtml(p.name)}</label>
         <select class="level-select" id="level-select-${escHtml(p.id)}" data-player-id="${escHtml(p.id)}">
@@ -1132,12 +1129,6 @@ function renderAdmin() {
           <label for="new-player-school">Home School</label>
           <input id="new-player-school" name="homeSchool" type="text" required maxlength="80" placeholder="e.g. ESADE">
 
-          <label for="new-player-year">Year (1st or 2nd)</label>
-          <select id="new-player-year" name="year" required>
-            <option value="1st">1st</option>
-            <option value="2nd" selected>2nd</option>
-          </select>
-
           <button type="submit" class="btn btn-primary">Add player</button>
         </form>
         <p id="roster-status" class="rsvp-status" aria-live="polite"></p>
@@ -1192,9 +1183,8 @@ function attachAdminHandlers() {
       const level = document.getElementById("new-player-level").value;
       const nationality = document.getElementById("new-player-nationality").value.trim();
       const homeSchool = document.getElementById("new-player-school").value.trim();
-      const year = document.getElementById("new-player-year").value;
       if (!name) return;
-      addCustomPlayer({ name, level, nationality, homeSchool, year });
+      addCustomPlayer({ name, level, nationality, homeSchool });
       renderView("admin");
     });
   }

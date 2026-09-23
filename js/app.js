@@ -828,12 +828,12 @@ function renderBalance() {
     <section class="view view-balance">
       <div class="view-header">
         <h2>Balance helper</h2>
-        <p class="muted">Courts keep beginners (1) and advanced (3) apart. When there are 4+ beginners, they get a full beginner court first; same for advanced. Leftovers mix with level 2 (1-2 or 2-3). Reshuffle remixes within those rules.</p>
+        <p class="muted">Courts keep beginners (1) and advanced (3) apart. When there are 4+ beginners, they get a full beginner court first; same for advanced. Leftovers mix with level 2 (1-2 or 2-3).${isAdminUnlocked() ? " Reshuffle remixes within those rules." : " Organizers can reshuffle after unlocking Admin."}</p>
       </div>
 
       ${extraCourtNote}
       <div class="balance-toolbar">
-        <button type="button" class="btn btn-primary" id="btn-reshuffle">Reshuffle</button>
+        ${isAdminUnlocked() ? `<button type="button" class="btn btn-primary" id="btn-reshuffle">Reshuffle</button>` : ""}
         <button type="button" class="btn btn-outline" id="btn-copy">Copy groupings</button>
       </div>
       <p id="balance-status" class="rsvp-status" aria-live="polite"></p>
@@ -882,7 +882,7 @@ function attachBalanceHandlers() {
   };
 
   const reshuffleBtn = document.getElementById("btn-reshuffle");
-  if (reshuffleBtn) {
+  if (reshuffleBtn && isAdminUnlocked()) {
     reshuffleBtn.addEventListener("click", () => {
       const newGroups = computeReshuffledGroups(attendees, courts);
       persistCurrentGrid(newGroups);

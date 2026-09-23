@@ -29,6 +29,13 @@ const LEVEL_SHORT = {
 // id, name, address, mapsUrl, defaultPriceNote
 const VENUES = [
   {
+    id: "venue-plus-padel-indoor",
+    name: "Plus Padel Indoor",
+    address: "Av. del Carrilet, 219, 08907 L'Hospitalet de Llobregat, Barcelona, Spain",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Plus+Padel+Indoor+Av.+del+Carrilet+219+L%27Hospitalet+de+Llobregat",
+    defaultPriceNote: "€38 / court (90 min) → €11 / person incl. €1.50 balls"
+  },
+  {
     id: "venue-drop-shot",
     name: "Drop Shot Padel Club (placeholder)",
     address: "Carrer d'Aragó 300, 08009 Barcelona",
@@ -41,31 +48,17 @@ const VENUES = [
     address: "Passeig de la Vall d'Hebron 178, 08035 Barcelona",
     mapsUrl: "https://maps.google.com/?q=Passeig+de+la+Vall+d%27Hebron+178+Barcelona",
     defaultPriceNote: "~€8-12 per person / hour"
-  },
-  {
-    id: "venue-diagonal",
-    name: "Diagonal Mar Sports Club (placeholder)",
-    address: "Av. Diagonal 177, 08018 Barcelona",
-    mapsUrl: "https://maps.google.com/?q=Av+Diagonal+177+Barcelona",
-    defaultPriceNote: "~€12-16 per person / hour"
   }
 ];
 
 // Players -----------------------------------------------------------------
-// id, name, level (1-3), active
-// NOTE: level here is the DEFAULT. localStorage (cemspadel_playerLevels_v1)
-// overrides this at runtime once someone edits a level on the Players page.
+// id, name, level (1-3), nationality, homeSchool, year ("1st"|"2nd"), active
+// NOTE: level DEFAULT can be overridden via localStorage (cemspadel_playerLevels_v1).
 const PLAYERS = [
-  { id: "p-amara",    name: "Amara Okafor",     level: 3, active: true },
-  { id: "p-luca",     name: "Luca Bianchi",     level: 2, active: true },
-  { id: "p-sofia",    name: "Sofia Nowak",      level: 1, active: true },
-  { id: "p-erik",     name: "Erik Lindqvist",   level: 2, active: true },
-  { id: "p-mei",      name: "Mei Zhang",        level: 1, active: true },
-  { id: "p-tomas",    name: "Tomás Herrera",    level: 3, active: true },
-  { id: "p-lea",      name: "Léa Dubois",       level: 2, active: true },
-  { id: "p-daniel",   name: "Daniel Kwiat",     level: 1, active: true },
-  { id: "p-ines",     name: "Inês Carvalho",    level: 3, active: true },
-  { id: "p-nikolai",  name: "Nikolai Petrov",   level: 2, active: true }
+  { id: "p-joao",   name: "João Rawes Freitas", level: 3, active: true, nationality: "Portuguese", homeSchool: "ESADE", year: "2nd" },
+  { id: "p-chris",  name: "Chris Imhoff",       level: 2, active: true, nationality: "German",     homeSchool: "ESADE", year: "1st" },
+  { id: "p-mark",   name: "Mark Erhan",         level: 2, active: true, nationality: "German",     homeSchool: "SSE",   year: "2nd" },
+  { id: "p-matteo", name: "Matteo Guardamagna", level: 3, active: true, nationality: "Italian",    homeSchool: "ESADE", year: "2nd" }
 ];
 
 // Sessions ------------------------------------------------------------
@@ -78,17 +71,33 @@ const PLAYERS = [
 // cemspadel_currentAttendance_v1 overrides who's signed up.
 const SESSIONS = [
   {
+    id: "session-2026-10-01",
+    weekLabel: "Thu 1 Oct",
+    dateISO: "2026-10-01",
+    time: "17:00",
+    venueId: "venue-plus-padel-indoor",
+    venueName: "Plus Padel Indoor",
+    venueAddress: "Av. del Carrilet, 219, 08907 L'Hospitalet de Llobregat, Barcelona, Spain",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Plus+Padel+Indoor+Av.+del+Carrilet+219+L%27Hospitalet+de+Llobregat",
+    pricePerPerson: 11,
+    courtTotalPrice: 38,
+    courts: 1,
+    notes: "90 minutes (17:00-18:30). €38/court ÷ 4 + €1.50 balls = €11 per person. Bring a racket if you have one.",
+    whatsappUrl: "",
+    attendeeIds: []
+  },
+  {
     id: "session-2026-09-26",
-    weekLabel: "This week",
+    weekLabel: "Week of Sep 26",
     dateISO: "2026-09-26",
     time: "19:00",
     venueId: "venue-drop-shot",
     pricePerPerson: 12,
     courtTotalPrice: 48,
     courts: 2,
-    notes: "Bring your own rackets if you have them — a few club rackets available to borrow. WhatsApp group link: (add yours in Admin).",
+    notes: "Past session.",
     whatsappUrl: "",
-    attendeeIds: ["p-amara", "p-luca", "p-sofia", "p-erik", "p-mei", "p-tomas", "p-lea", "p-daniel"]
+    attendeeIds: ["p-joao", "p-chris", "p-mark", "p-matteo"]
   },
   {
     id: "session-2026-09-19",
@@ -101,7 +110,7 @@ const SESSIONS = [
     courts: 2,
     notes: "Great turnout, sunny evening.",
     whatsappUrl: "",
-    attendeeIds: ["p-amara", "p-tomas", "p-lea", "p-nikolai", "p-sofia", "p-daniel", "p-erik", "p-ines"]
+    attendeeIds: ["p-joao", "p-chris", "p-matteo"]
   },
   {
     id: "session-2026-09-12",
@@ -114,6 +123,6 @@ const SESSIONS = [
     courts: 1,
     notes: "Small group — first session of the semester.",
     whatsappUrl: "",
-    attendeeIds: ["p-mei", "p-luca", "p-erik", "p-nikolai"]
+    attendeeIds: ["p-chris", "p-mark"]
   }
 ];

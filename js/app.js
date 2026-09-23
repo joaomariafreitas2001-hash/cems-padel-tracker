@@ -178,20 +178,26 @@ function setPlayerLevel(playerId, level) {
   writeJSON(LS_KEYS.PLAYER_LEVELS, levels);
 }
 
-function addCustomPlayer(name, level, notes) {
+function addCustomPlayer(fields) {
   const custom = readJSON(LS_KEYS.CUSTOM_PLAYERS, []);
   const id = "p-custom-" + Date.now().toString(36);
   custom.push({
     id,
-    name: name.trim(),
-    level: Number(level),
+    name: String(fields.name || "").trim(),
+    level: Number(fields.level) || 2,
+    nationality: String(fields.nationality || "").trim(),
+    homeSchool: String(fields.homeSchool || "").trim(),
+    year: String(fields.year || "").trim(),
     active: true,
-    notes: (notes || "").trim(),
+    notes: String(fields.notes || "").trim(),
     levelUpdatedAt: nowISO()
   });
   writeJSON(LS_KEYS.CUSTOM_PLAYERS, custom);
-  // If previously deleted, allow re-adding under a new id (custom always new).
   return id;
+}
+
+function playerMetaLine(p) {
+  return [p.nationality, p.homeSchool, p.year].filter(Boolean).join(" · ");
 }
 
 /** Remove a player from the roster (Admin). Seed players are hidden via DELETED_PLAYERS. */
@@ -573,6 +579,25 @@ function levelBadge(level, opts) {
   return `<span class="${cls}" title="${escHtml(LEVEL_LABELS[level] || "")}">${escHtml(label || "?")}</span>`;
 }
 
+
+/** Flag + school logo circles beside a player name. */
+function nameBadgesHtml(player) {
+  if (typeof flagSrc !== "function" || typeof schoolLogoSrc !== "function") return "";
+  const flag = flagSrc(player.nationality);
+  const logo = schoolLogoSrc(player.homeSchool);
+  const parts = [];
+  if (flag) {
+    parts.push(`<img class="circle-badge" src="${escHtml(flag)}" alt="" title="${escHtml(player.nationality || "")}" loading="lazy" width="22" height="22" onerror="this.remove()">`);
+  }
+  if (logo) {
+    const school = typeof resolveSchool === "function" ? resolveSchool(player.homeSchool) : null;
+    const tip = (school && school.label) || player.homeSchool || "";
+    parts.push(`<img class="circle-badge circle-badge--logo" src="${escHtml(logo)}" alt="" title="${escHtml(tip)}" loading="lazy" width="22" height="22" onerror="this.remove()">`);
+  }
+  if (!parts.length) return "";
+  return `<span class="name-badges">${parts.join("")}</span>`;
+}
+
 /* ============================== View: Home ============================== */
 
 function renderHome() {
@@ -641,7 +666,7 @@ function renderHome() {
           : `<ul class="attendee-list">
               ${attendees.map(p => `
                 <li class="attendee-item">
-                  <span class="attendee-name">${escHtml(p.name)}</span>
+                  <span class="name-cell">${nameBadgesHtml(p)}<span class="attendee-name">${escHtml(p.name)}</span></span>
                   ${levelBadge(p.level, { short: true })}
                 </li>`).join("")}
              </ul>`}
@@ -700,56 +725,65 @@ function renderPlayers() {
     <section class="view view-players">
       <div class="view-header">
         <h2>Players &amp; Levels</h2>
-        <p class="muted">View-only roster. Organizers edit names and levels in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
+        <p class="muted">View-only roster (Name, Level, Nationality, Home School, Year). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
       </div>
 
       <div class="level-legend card">
         <h3>Level legend</h3>
         <ul class="legend-list">
-          <li>${levelBadge(1)} - new to padel, still learning the basics</li>
-          <li>${levelBadge(2)} - comfortable rallying, knows the rules well (can bridge either band)</li>
-          <li>${levelBadge(3)} - strong, competitive, strategic play</li>
+          <li>${levelBadge(1)} - beginner</li>
+          <li>${levelBadge(2)} - intermediate</li>
+          <li>${levelBadge(3)} - advanced</li>
         </ul>
-        <p class="muted" style="margin-top:0.75rem">Balance rule: Level 1 never plays with Level 3. Courts are Levels 1-2, Levels 2-3, or Level 3 only.</p>
+        <p class="muted" style="margin-top:0.75rem">Balance rule: Level 1 never plays with Level 3.</p>
       </div>
 
       <div class="card">
         <h3>Roster (${players.length})</h3>
-        <ul class="player-list" id="player-list">
-          ${players.map(p => renderPlayerRow(p)).join("")}
-        </ul>
+        <div class="roster-table-wrap">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Level</th>
+                <th>Nationality</th>
+                <th>Home School</th>
+                <th>Year</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${players.map(p => renderPlayerRow(p)).join("")}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>`;
 }
 
 function renderPlayerRow(p) {
-  const lastUpdated = p.levelUpdatedAt
-    ? `Last updated ${escHtml(new Date(p.levelUpdatedAt).toLocaleString())}`
-    : "Not yet updated";
-  const history = getAttendanceHistoryForPlayer(p.id, 5);
   return `
-    <li class="player-row" data-player-id="${escHtml(p.id)}">
-      <div class="player-row-main">
-        <span class="player-name">${escHtml(p.name)}</span>
-        ${levelBadge(p.level, { short: true })}
-      </div>
-      ${p.notes ? `<p class="player-notes muted">${escHtml(p.notes)}</p>` : ""}
-      <p class="last-updated muted">${lastUpdated}</p>
-      ${history.length ? `<p class="muted player-history">Recent: ${history.join(", ")}</p>` : ""}
-    </li>`;
+    <tr data-player-id="${escHtml(p.id)}">
+      <td>
+        <span class="name-cell">
+          ${nameBadgesHtml(p)}
+          <span class="player-name">${escHtml(p.name)}</span>
+        </span>
+      </td>
+      <td>${levelBadge(p.level, { short: true })}</td>
+      <td>${escHtml(p.nationality || "-")}</td>
+      <td>${escHtml(p.homeSchool || "-")}</td>
+      <td>${escHtml(p.year || "-")}</td>
+    </tr>`;
 }
 
 function renderAdminPlayerRow(p) {
-  const lastUpdated = p.levelUpdatedAt
-    ? `Last updated ${escHtml(new Date(p.levelUpdatedAt).toLocaleString())}`
-    : "Not yet updated";
   return `
     <li class="player-row" data-player-id="${escHtml(p.id)}">
       <div class="player-row-main">
-        <span class="player-name">${escHtml(p.name)}</span>
+        <span class="name-cell">${nameBadgesHtml(p)}<span class="player-name">${escHtml(p.name)}</span></span>
         ${levelBadge(p.level, { short: true })}
       </div>
-      ${p.notes ? `<p class="player-notes muted">${escHtml(p.notes)}</p>` : ""}
+      <p class="player-notes muted">${escHtml(playerMetaLine(p) || "No nationality / school / year yet")}</p>
       <div class="player-row-controls">
         <label class="visually-hidden" for="level-select-${escHtml(p.id)}">Level for ${escHtml(p.name)}</label>
         <select class="level-select" id="level-select-${escHtml(p.id)}" data-player-id="${escHtml(p.id)}">
@@ -758,7 +792,6 @@ function renderAdminPlayerRow(p) {
           <option value="3" ${p.level === 3 ? "selected" : ""}>3 - Advanced</option>
         </select>
         <button type="button" class="btn btn-danger btn-sm btn-delete-player" data-player-id="${escHtml(p.id)}" data-player-name="${escHtml(p.name)}">Delete</button>
-        <span class="last-updated muted">${lastUpdated}</span>
       </div>
     </li>`;
 }
@@ -1056,7 +1089,7 @@ function renderAdmin() {
         <h3>Add a player</h3>
         <form id="add-player-form" class="stacked-form">
           <label for="new-player-name">Name</label>
-          <input id="new-player-name" name="name" type="text" required maxlength="60" placeholder="e.g. Marta Silva">
+          <input id="new-player-name" name="name" type="text" required maxlength="80" placeholder="e.g. Marta Silva">
 
           <label for="new-player-level">Level</label>
           <select id="new-player-level" name="level">
@@ -1065,8 +1098,17 @@ function renderAdmin() {
             <option value="3">3 - Advanced</option>
           </select>
 
-          <label for="new-player-notes">Notes (optional)</label>
-          <input id="new-player-notes" name="notes" type="text" maxlength="120" placeholder="e.g. lefty, prefers back court">
+          <label for="new-player-nationality">Nationality</label>
+          <input id="new-player-nationality" name="nationality" type="text" required maxlength="60" placeholder="e.g. Portuguese">
+
+          <label for="new-player-school">Home School</label>
+          <input id="new-player-school" name="homeSchool" type="text" required maxlength="80" placeholder="e.g. ESADE">
+
+          <label for="new-player-year">Year (1st or 2nd)</label>
+          <select id="new-player-year" name="year" required>
+            <option value="1st">1st</option>
+            <option value="2nd" selected>2nd</option>
+          </select>
 
           <button type="submit" class="btn btn-primary">Add player</button>
         </form>
@@ -1120,9 +1162,11 @@ function attachAdminHandlers() {
       e.preventDefault();
       const name = document.getElementById("new-player-name").value.trim();
       const level = document.getElementById("new-player-level").value;
-      const notes = document.getElementById("new-player-notes").value.trim();
+      const nationality = document.getElementById("new-player-nationality").value.trim();
+      const homeSchool = document.getElementById("new-player-school").value.trim();
+      const year = document.getElementById("new-player-year").value;
       if (!name) return;
-      addCustomPlayer(name, level, notes);
+      addCustomPlayer({ name, level, nationality, homeSchool, year });
       renderView("admin");
     });
   }

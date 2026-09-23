@@ -1222,8 +1222,9 @@ function renderCourtCard(group, index) {
   const warn = courtHasConflict(players)
     ? `<p class="rsvp-status">Warning: beginner + advanced on this court. Reshuffle.</p>`
     : "";
+  const emptyClass = players.length ? "" : " court-card--empty";
   return `
-    <div class="court-card">
+    <div class="court-card${emptyClass}">
       <h3>Court ${number}</h3>
       <p class="court-avg muted">${players.length ? `${escHtml(bandLabel(band))} &middot; Avg level: ${avg.toFixed(1)}` : "No players yet"}</p>
       ${warn}
@@ -1234,7 +1235,7 @@ function renderCourtCard(group, index) {
             <span>${escHtml(p.name)}</span>
             ${levelBadge(p.level, { short: true })}
           </li>`).join("")
-          : `<li class="muted">Open slot</li>`}
+          : `<li class="muted court-open-slot">Open slot</li>`}
       </ul>
     </div>`;
 }

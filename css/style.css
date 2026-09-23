@@ -127,12 +127,13 @@ a:hover { color: var(--coral-dark); }
 
 .brand-logo {
   height: 40px;
-  width: auto;
+  width: 40px;
   display: block;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
-  padding: 2px 4px;
+  padding: 4px;
   object-fit: contain;
+  box-shadow: 0 0 0 2px rgba(198, 242, 74, 0.5);
 }
 
 .brand-wordmark {
@@ -385,16 +386,26 @@ main:focus {
 }
 .btn-primary:hover { background: var(--lime-dark); }
 
+/* Default btn-outline reads on the light page background (most places it
+   appears: toolbars, cards, admin actions). It only flips to a light/white
+   outline inside a dark surface like .hero-card. */
 .btn-outline {
   background: transparent;
-  border-color: rgba(255,255,255,0.4);
-  color: #fff;
-}
-.btn-outline:hover { border-color: #fff; }
-
-.card .btn-outline {
   border-color: var(--navy-700);
   color: var(--navy-900);
+}
+.btn-outline:hover {
+  border-color: var(--navy-950);
+  background: var(--navy-100);
+}
+
+.hero-card .btn-outline {
+  border-color: rgba(255,255,255,0.5);
+  color: #fff;
+}
+.hero-card .btn-outline:hover {
+  border-color: #fff;
+  background: rgba(255,255,255,0.12);
 }
 
 .btn-ghost {
@@ -588,6 +599,26 @@ select:focus, input:focus, textarea:focus, button:focus {
   margin: -6px 0 10px;
 }
 
+/* Empty court slot: read as "waiting to be filled" rather than broken */
+.court-card--empty {
+  border-top-style: dashed;
+  border-top-width: 3px;
+  border-color: var(--border);
+  background: var(--surface-alt);
+  box-shadow: none;
+}
+.court-card--empty h3 {
+  color: var(--text-muted);
+}
+.court-open-slot {
+  display: block;
+  text-align: center;
+  padding: 14px 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
 /* ---------------------------- History ---------------------------- */
 
 .history-card-header {
@@ -669,18 +700,29 @@ select:focus, input:focus, textarea:focus, button:focus {
 .roster-table th,
 .roster-table td {
   text-align: left;
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 
 .roster-table th {
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted, #64748b);
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
   white-space: nowrap;
+  border-bottom: 2px solid var(--navy-100);
+}
+
+.roster-table tbody tr {
+  transition: background-color 0.1s ease;
+}
+.roster-table tbody tr:hover {
+  background: var(--surface-alt);
+}
+.roster-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .roster-table td:nth-child(2) {
@@ -690,7 +732,7 @@ select:focus, input:focus, textarea:focus, button:focus {
 .name-cell {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -702,19 +744,26 @@ select:focus, input:focus, textarea:focus, button:focus {
 }
 
 .circle-badge {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 1.5px rgba(15, 23, 42, 0.14);
 }
 
 .circle-badge--logo {
   object-fit: contain;
-  padding: 2px;
+  padding: 3px;
   background: #fff;
+}
+
+.roster-table .player-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--navy-950);
 }
 
 .attendee-check-list {
@@ -784,9 +833,21 @@ select:focus, input:focus, textarea:focus, button:focus {
 
 .venue-photo {
   margin: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 6px 16px rgba(4, 8, 24, 0.35);
+  position: relative;
+}
+
+.venue-photo::after {
+  /* subtle navy wash so photos of varying color temperature read as one set,
+     tied to the hero card instead of looking like a raw upload */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(11, 19, 48, 0.12) 0%, rgba(11, 19, 48, 0) 35%, rgba(11, 19, 48, 0.22) 100%);
+  pointer-events: none;
 }
 
 .venue-photo img {
@@ -794,6 +855,7 @@ select:focus, input:focus, textarea:focus, button:focus {
   width: 100%;
   height: 180px;
   object-fit: cover;
+  filter: saturate(1.04) contrast(1.02);
 }
 
 .venue-contact {

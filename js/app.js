@@ -208,7 +208,7 @@ function setPlayerLevel(playerId, level) {
 
 function addCustomPlayer(fields) {
   const custom = readJSON(LS_KEYS.CUSTOM_PLAYERS, []);
-  const id = "p-custom-" + Date.now().toString(36);
+  const id = "p-custom-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
   custom.push({
     id,
     name: String(fields.name || "").trim(),
@@ -221,6 +221,69 @@ function addCustomPlayer(fields) {
   });
   writeJSON(LS_KEYS.CUSTOM_PLAYERS, custom);
   return id;
+}
+
+/**
+ * Parse pasted roster rows (Sheets/Excel TSV or CSV).
+ * Expected columns: Name, Level, Nationality, Home School (header optional).
+ */
+function parseRosterPaste(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const rows = [];
+
+  for (const line of lines) {
+    let cols;
+    if (line.includes("\t")) cols = line.split("\t");
+    else if (line.includes(",")) cols = line.split(",");
+    else cols = line.split(/\s{2,}/);
+
+    cols = cols.map(c => String(c || "").trim());
+    while (cols.length && cols[cols.length - 1] === "") cols.pop();
+    if (cols.length < 2) continue;
+
+    const name = cols[0];
+    const levelRaw = cols[1];
+    const nationality = cols[2] || "";
+    const homeSchool = cols[3] || "";
+
+    if (/^name$/i.test(name) && /^level$/i.test(levelRaw)) continue;
+
+    const level = Number(String(levelRaw).replace(/[^\d]/g, ""));
+    if (!name || ![1, 2, 3].includes(level)) continue;
+
+    rows.push({ name, level, nationality, homeSchool });
+  }
+
+  return rows;
+}
+
+/** Import pasted rows; skips names already on the roster (case-insensitive). */
+function importPlayersFromPaste(text) {
+  const parsed = parseRosterPaste(text);
+  const existing = new Set(getAllPlayers().map(p => p.name.trim().toLowerCase()));
+  let added = 0;
+  let skipped = 0;
+  const errors = [];
+
+  for (const row of parsed) {
+    const key = row.name.trim().toLowerCase();
+    if (existing.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    addCustomPlayer(row);
+    existing.add(key);
+    added += 1;
+  }
+
+  if (!parsed.length) {
+    errors.push("No valid rows found. Paste Name, Level, Nationality, Home School (tab-separated).");
+  }
+
+  return { added, skipped, total: parsed.length, errors };
 }
 
 function playerMetaLine(p) {
@@ -1096,6 +1159,13 @@ function renderAdmin() {
 
           <button type="submit" class="btn btn-primary">Add player</button>
         </form>
+
+        <form id="paste-roster-form" class="stacked-form paste-roster-form">
+          <label for="paste-roster">Or paste from a sheet</label>
+          <p class="muted">Columns: Name, Level, Nationality, Home School (header row optional). Copy from Excel/Sheets and paste below.</p>
+          <textarea id="paste-roster" name="paste" rows="6" placeholder="Name&#9;Level&#9;Nationality&#9;Home School&#10;João Rawes Freitas&#9;3&#9;Portuguese&#9;ESADE"></textarea>
+          <button type="submit" class="btn btn-primary">Import pasted players</button>
+        </form>
         <p id="roster-status" class="rsvp-status" aria-live="polite"></p>
       </div>
 
@@ -1162,6 +1232,24 @@ function attachAdminHandlers() {
       if (!name) return;
       addCustomPlayer({ name, level, nationality, homeSchool });
       renderView("admin");
+    });
+  }
+
+  const pasteForm = document.getElementById("paste-roster-form");
+  if (pasteForm) {
+    pasteForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const textarea = document.getElementById("paste-roster");
+      const status = document.getElementById("roster-status");
+      const result = importPlayersFromPaste(textarea ? textarea.value : "");
+      if (result.errors.length) {
+        if (status) status.textContent = result.errors[0];
+        return;
+      }
+      const parts = [`Added ${result.added}`];
+      if (result.skipped) parts.push(`skipped ${result.skipped} already on roster`);
+      if (status) status.textContent = parts.join(" · ") + ".";
+      if (result.added > 0) renderView("admin");
     });
   }
 

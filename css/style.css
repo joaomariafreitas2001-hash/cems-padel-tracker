@@ -741,3 +741,21 @@ select:focus, input:focus, textarea:focus, button:focus {
   height: 18px;
   accent-color: var(--lime, #b4f000);
 }
+
+.paste-roster-form {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.paste-roster-form textarea {
+  width: 100%;
+  min-height: 8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  resize: vertical;
+}

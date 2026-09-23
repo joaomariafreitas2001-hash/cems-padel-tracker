@@ -1019,7 +1019,6 @@ function renderHome() {
           <div><dt>Price</dt><dd>${session.pricePerPerson ? `&euro;${escHtml(session.pricePerPerson)} / person` : "TBD"}${session.courtTotalPrice ? ` <span class="muted">(&euro;${escHtml(session.courtTotalPrice)} total court)</span>` : ""}</dd></div>
           <div><dt>Courts</dt><dd>${escHtml(courtsLine || "TBD")}</dd></div>
         </dl>
-        ${venueContactHtml(venue)}
         ${session.notes ? `<p class="session-notes">${escHtml(session.notes)}</p>` : ""}
         ${session.whatsappUrl ? `<a class="btn btn-ghost" href="${escHtml(session.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp group</a>` : ""}
       </div>

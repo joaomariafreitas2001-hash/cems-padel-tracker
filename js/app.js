@@ -18,7 +18,7 @@
 const LS_KEYS = {
   PLAYER_LEVELS: "cemspadel_playerLevels_v1",     // { [playerId]: { level:1-3, updatedAt: ISOString } }
   CUSTOM_PLAYERS: "cemspadel_customPlayers_v1",   // [ { id, name, level, active, notes, updatedAt } ]
-  SESSION_OVERRIDES: "cemspadel_sessionOverrides_v1", // { [sessionId]: { venueName, venueAddress, mapsUrl, venueId?, dateISO, time, pricePerPerson, courtTotalPrice, courts, notes, whatsappUrl } }
+  SESSION_OVERRIDES: "cemspadel_sessionOverrides_v2", // { [sessionId]: { venueName, venueAddress, mapsUrl, venueId?, dateISO, time, pricePerPerson, courtTotalPrice, courts, notes, whatsappUrl } }
   ATTENDANCE: "cemspadel_attendance_v2",          // { [sessionId]: [playerId, ...] }
   MY_PLAYER_ID: "cemspadel_myPlayerId_v1",        // string playerId (or "" )
   GROUPINGS: "cemspadel_groupings_v1",            // { [sessionId]: [ [playerId,...], [playerId,...], ... ] }
@@ -158,6 +158,10 @@ function getSessionWithOverrides(sessionId) {
 /** Resolve "this week's" session: soonest upcoming (today or later) by dateISO,
  *  falling back to the most recent past session if none is upcoming. */
 function getCurrentSession() {
+  // Prefer explicitly marked current week (avoids older "upcoming" placeholders winning).
+  const marked = SESSIONS.find(s => s.isCurrent);
+  if (marked) return getSessionWithOverrides(marked.id);
+
   const today = todayISO();
   const sorted = [...SESSIONS].sort((a, b) => (a.dateISO < b.dateISO ? -1 : 1));
   const upcoming = sorted.find(s => s.dateISO >= today);

@@ -1055,7 +1055,7 @@ function renderPlayers() {
     <section class="view view-players">
       <div class="view-header">
         <h2>Players &amp; Levels</h2>
-        <p class="muted">View-only roster (Name, Level, Nationality, Home School). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
+        <p class="muted">View-only roster (Name, Level, Nationality, Home School, Sessions). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
       </div>
 
       <div class="level-legend card">
@@ -1078,6 +1078,7 @@ function renderPlayers() {
                 <th>Level</th>
                 <th>Nationality</th>
                 <th>Home School</th>
+                <th>Sessions</th>
               </tr>
             </thead>
             <tbody>
@@ -1087,6 +1088,11 @@ function renderPlayers() {
         </div>
       </div>
     </section>`;
+}
+
+/** How many archived padel weeks this player attended. Stubbed at 0 for now. */
+function getPlayerSessionCount(_playerId) {
+  return 0;
 }
 
 function renderPlayerRow(p) {
@@ -1101,6 +1107,7 @@ function renderPlayerRow(p) {
       <td>${levelBadge(p.level, { short: true })}</td>
       <td>${escHtml(p.nationality || "-")}</td>
       <td>${escHtml(p.homeSchool || "-")}</td>
+      <td class="sessions-count">${escHtml(getPlayerSessionCount(p.id))}</td>
     </tr>`;
 }
 
@@ -1111,7 +1118,7 @@ function renderAdminPlayerRow(p) {
         <span class="name-cell">${nameBadgesHtml(p)}<span class="player-name">${escHtml(p.name)}</span></span>
         ${levelBadge(p.level, { short: true })}
       </div>
-      <p class="player-notes muted">${escHtml(playerMetaLine(p) || "No nationality / school yet")}</p>
+      <p class="player-notes muted">${escHtml(playerMetaLine(p) || "No nationality / school yet")} · ${escHtml(getPlayerSessionCount(p.id))} sessions</p>
       <div class="player-row-controls">
         <label class="visually-hidden" for="level-select-${escHtml(p.id)}">Level for ${escHtml(p.name)}</label>
         <select class="level-select" id="level-select-${escHtml(p.id)}" data-player-id="${escHtml(p.id)}">

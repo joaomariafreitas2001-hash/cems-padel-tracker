@@ -1158,31 +1158,24 @@ function renderBalance() {
   }
 
   const attendees = (session.attendeeIds || []).map(id => getPlayerById(id)).filter(Boolean);
-  const courts = session.courts || 1;
+  const courts = Math.max(1, Number(session.courts) || 3);
 
-  if (attendees.length === 0) {
-    return `
-      <section class="view view-balance">
-        <div class="view-header"><h2>Balance helper</h2></div>
-        <div class="empty-state">
-          <h2>No attendees yet</h2>
-          <p>Once organizers mark who is playing in Admin, come back here to see balanced court groupings.</p>
-        </div>
-      </section>`;
+  let groups = [];
+  if (attendees.length > 0) {
+    const cached = getGroupings(session.id);
+    const attendeeIds = attendees.map(p => p.id).sort().join(",");
+    const cacheValid = cached && cached._forIds === attendeeIds && cached._courts === courts;
+    if (!cacheValid) {
+      groups = computeBalancedGroups(attendees, courts);
+    } else {
+      groups = cached.groups.map(ids => {
+        const g = ids.map(id => getPlayerById(id)).filter(Boolean);
+        g._band = groupBand(g);
+        return g;
+      });
+    }
   }
-
-  let groups = getGroupings(session.id);
-  const attendeeIds = attendees.map(p => p.id).sort().join(",");
-  const cacheValid = groups && groups._forIds === attendeeIds && groups._courts === courts;
-  if (!cacheValid) {
-    groups = computeBalancedGroups(attendees, courts);
-  } else {
-    groups = groups.groups.map(ids => {
-      const g = ids.map(id => getPlayerById(id)).filter(Boolean);
-      g._band = groupBand(g);
-      return g;
-    });
-  }
+  groups = ensureCourtSlots(groups, courts);
 
   const hasBothEnds = attendees.some(p => p.level === 1) && attendees.some(p => p.level === 3);
   const extraCourtNote = (hasBothEnds && courts < 2)
@@ -1198,7 +1191,7 @@ function renderBalance() {
 
       ${extraCourtNote}
       <div class="balance-toolbar">
-        ${isAdminUnlocked() ? `<button type="button" class="btn btn-primary" id="btn-reshuffle">Reshuffle</button>` : ""}
+        ${isAdminUnlocked() && attendees.length ? `<button type="button" class="btn btn-primary" id="btn-reshuffle">Reshuffle</button>` : ""}
         <button type="button" class="btn btn-outline" id="btn-copy">Copy groupings</button>
       </div>
       <p id="balance-status" class="rsvp-status" aria-live="polite"></p>
@@ -1209,24 +1202,39 @@ function renderBalance() {
     </section>`;
 }
 
+/** Always show the booked number of court slots (e.g. Court 1–3). */
+function ensureCourtSlots(groups, courts) {
+  const n = Math.max(1, Number(courts) || 1);
+  const out = Array.isArray(groups) ? groups.slice() : [];
+  while (out.length < n) {
+    const empty = [];
+    empty._band = "mid";
+    out.push(empty);
+  }
+  return out;
+}
+
 function renderCourtCard(group, index) {
-  const letter = String.fromCharCode(65 + index); // A, B, C...
-  const avg = groupAverage(group);
-  const band = group._band || groupBand(group);
-  const warn = courtHasConflict(group)
+  const number = index + 1;
+  const players = group || [];
+  const avg = players.length ? groupAverage(players) : 0;
+  const band = players._band || groupBand(players);
+  const warn = courtHasConflict(players)
     ? `<p class="rsvp-status">Warning: beginner + advanced on this court. Reshuffle.</p>`
     : "";
   return `
     <div class="court-card">
-      <h3>Court ${letter}</h3>
-      <p class="court-avg muted">${escHtml(bandLabel(band))} &middot; Avg level: ${avg.toFixed(1)}</p>
+      <h3>Court ${number}</h3>
+      <p class="court-avg muted">${players.length ? `${escHtml(bandLabel(band))} &middot; Avg level: ${avg.toFixed(1)}` : "No players yet"}</p>
       ${warn}
       <ul class="court-player-list">
-        ${group.map(p => `
+        ${players.length
+          ? players.map(p => `
           <li>
             <span>${escHtml(p.name)}</span>
             ${levelBadge(p.level, { short: true })}
-          </li>`).join("")}
+          </li>`).join("")
+          : `<li class="muted">Open slot</li>`}
       </ul>
     </div>`;
 }
@@ -1249,7 +1257,7 @@ function attachBalanceHandlers() {
   const reshuffleBtn = document.getElementById("btn-reshuffle");
   if (reshuffleBtn && isAdminUnlocked()) {
     reshuffleBtn.addEventListener("click", () => {
-      const newGroups = computeReshuffledGroups(attendees, courts);
+      const newGroups = ensureCourtSlots(computeReshuffledGroups(attendees, courts), courts);
       persistCurrentGrid(newGroups);
       document.getElementById("court-grid").innerHTML = newGroups.map((g, i) => renderCourtCard(g, i)).join("");
       if (status) status.textContent = "Groupings reshuffled.";

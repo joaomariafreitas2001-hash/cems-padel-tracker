@@ -45,7 +45,7 @@ function setAdminUnlocked(unlocked) {
 /* ============================== Cache / storage migration ============================== */
 
 /** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
-const STORAGE_EPOCH = "6";
+const STORAGE_EPOCH = "10";
 (function migrateStorageEpoch() {
   try {
     const key = "cemspadel_storageEpoch_v1";
@@ -644,10 +644,9 @@ function renderHome() {
   const attendees = (session.attendeeIds || [])
     .map(id => getPlayerById(id))
     .filter(Boolean);
-  const spotsLine = session.courts
-    ? `${session.courts} court${session.courts > 1 ? "s" : ""} booked &middot; up to ${session.courts * 4} players`
+  const courtsLine = session.courts
+    ? `${session.courts} court${session.courts > 1 ? "s" : ""} booked${session.courtsNote ? ` (${session.courtsNote})` : ""}`
     : "";
-  const spotsLeft = session.courts ? Math.max(0, session.courts * 4 - attendees.length) : null;
 
   return `
     <section class="view view-home">
@@ -659,7 +658,7 @@ function renderHome() {
           <div><dt>Time</dt><dd>${escHtml(session.time || "TBD")}</dd></div>
           <div><dt>Address</dt><dd>${venue.address ? escHtml(venue.address) : "TBD"}${venue.mapsUrl ? ` <a href="${escHtml(venue.mapsUrl)}" target="_blank" rel="noopener">Open in Google Maps &rarr;</a>` : ""}</dd></div>
           <div><dt>Price</dt><dd>${session.pricePerPerson ? `&euro;${escHtml(session.pricePerPerson)} / person` : "TBD"}${session.courtTotalPrice ? ` <span class="muted">(&euro;${escHtml(session.courtTotalPrice)} total court)</span>` : ""}</dd></div>
-          <div><dt>Courts</dt><dd>${escHtml(spotsLine || "TBD")}${spotsLeft !== null ? ` &middot; <strong>${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left</strong>` : ""}</dd></div>
+          <div><dt>Courts</dt><dd>${escHtml(courtsLine || "TBD")}</dd></div>
         </dl>
         ${session.notes ? `<p class="session-notes">${escHtml(session.notes)}</p>` : ""}
         ${session.whatsappUrl ? `<a class="btn btn-ghost" href="${escHtml(session.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp group</a>` : ""}

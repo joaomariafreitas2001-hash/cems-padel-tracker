@@ -24,7 +24,10 @@ const LS_KEYS = {
   GROUPINGS: "cemspadel_groupings_v1",            // { [sessionId]: [ [playerId,...], [playerId,...], ... ] }
   PLAYER_HISTORY: "cemspadel_playerHistory_v1",   // { [playerId]: [sessionId, ...] }
   ADMIN_UNLOCKED: "cemspadel_adminUnlocked_v1",   // "1" while this browser session has unlocked Admin
-  DELETED_PLAYERS: "cemspadel_deletedPlayers_v1"  // [playerId, ...] hidden from roster (seed + custom)
+  DELETED_PLAYERS: "cemspadel_deletedPlayers_v1", // [playerId, ...] hidden from roster (seed + custom)
+  ARCHIVED_SESSIONS: "cemspadel_archivedSessions_v1", // [ sessionSnapshot, ... ] History tab
+  LIVE_SESSION: "cemspadel_liveSession_v1",       // current week object after first "set up next week"
+  SESSION_PHASE: "cemspadel_sessionPhase_v1"      // { status: "live"|"waiting", nextDateISO?, lastTemplate?, seedRetired? }
 };
 
 /** Club organizer password for the Admin view (client-side gate only). */
@@ -118,6 +121,33 @@ function nowISO() {
   return new Date().toISOString();
 }
 
+function addDaysISO(dateISO, days) {
+  const d = new Date(dateISO + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Short week label, e.g. "Thu 15 Oct". */
+function formatWeekLabel(dateISO) {
+  try {
+    const d = new Date(dateISO + "T12:00:00");
+    return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  } catch (e) {
+    return dateISO;
+  }
+}
+
+function getSessionPhase() {
+  return readJSON(LS_KEYS.SESSION_PHASE, { status: "live", seedRetired: false });
+}
+
+function setSessionPhase(phase) {
+  writeJSON(LS_KEYS.SESSION_PHASE, phase);
+}
+
 /* ============================== Data access layer ============================== */
 /* Merges static padel-data.js defaults with localStorage overrides. */
 
@@ -166,7 +196,10 @@ function getAllSessionsSorted() {
 }
 
 function getSessionWithOverrides(sessionId) {
-  const base = SESSIONS.find(s => s.id === sessionId);
+  const live = readJSON(LS_KEYS.LIVE_SESSION, null);
+  const base = (live && live.id === sessionId)
+    ? live
+    : SESSIONS.find(s => s.id === sessionId);
   if (!base) return null;
   const overrides = readJSON(LS_KEYS.SESSION_OVERRIDES, {});
   const attendanceMap = readJSON(LS_KEYS.ATTENDANCE, {});
@@ -177,10 +210,16 @@ function getSessionWithOverrides(sessionId) {
   return merged;
 }
 
-/** Resolve "this week's" session: soonest upcoming (today or later) by dateISO,
- *  falling back to the most recent past session if none is upcoming. */
+/** Resolve "this week's" session. Null while waiting for the next biweekly Thursday. */
 function getCurrentSession() {
-  // Prefer explicitly marked current week (avoids older "upcoming" placeholders winning).
+  const phase = getSessionPhase();
+  if (phase.status === "waiting") return null;
+
+  const live = readJSON(LS_KEYS.LIVE_SESSION, null);
+  if (live && live.id) return getSessionWithOverrides(live.id);
+
+  if (phase.seedRetired) return null;
+
   const marked = SESSIONS.find(s => s.isCurrent);
   if (marked) return getSessionWithOverrides(marked.id);
 
@@ -192,10 +231,118 @@ function getCurrentSession() {
 }
 
 function getPastSessions() {
-  const current = getCurrentSession();
-  return getAllSessionsSorted()
-    .filter(s => !current || s.id !== current.id)
-    .map(s => getSessionWithOverrides(s.id));
+  const archived = readJSON(LS_KEYS.ARCHIVED_SESSIONS, []);
+  return [...archived].sort((a, b) => (a.dateISO < b.dateISO ? 1 : -1));
+}
+
+/**
+ * Freeze the live week into History and put Home into "see you in 2 weeks".
+ * Next Thursday = current session date + 14 days.
+ */
+function archiveCurrentWeekToHistory() {
+  const session = getCurrentSession();
+  if (!session) return { ok: false, error: "No live week to save." };
+
+  const attendeeSnapshots = (session.attendeeIds || [])
+    .map(id => {
+      const p = getPlayerById(id);
+      if (!p) return null;
+      return {
+        id: p.id,
+        name: p.name,
+        level: p.level,
+        nationality: p.nationality || "",
+        homeSchool: p.homeSchool || ""
+      };
+    })
+    .filter(Boolean);
+
+  const venue = resolveSessionVenue(session);
+  const snapshot = {
+    id: session.id,
+    weekLabel: session.weekLabel || formatWeekLabel(session.dateISO),
+    dateISO: session.dateISO,
+    time: session.time || "",
+    venueId: session.venueId || "",
+    venueName: venue.name || session.venueName || "",
+    venueAddress: venue.address || session.venueAddress || "",
+    mapsUrl: venue.mapsUrl || session.mapsUrl || "",
+    pricePerPerson: session.pricePerPerson,
+    courtTotalPrice: session.courtTotalPrice,
+    courts: session.courts,
+    courtsNote: session.courtsNote || "",
+    notes: session.notes || "",
+    whatsappUrl: session.whatsappUrl || "",
+    attendeeIds: session.attendeeIds || [],
+    attendeeSnapshots,
+    archivedAt: nowISO()
+  };
+
+  const archived = readJSON(LS_KEYS.ARCHIVED_SESSIONS, []).filter(s => s.id !== snapshot.id);
+  archived.unshift(snapshot);
+  writeJSON(LS_KEYS.ARCHIVED_SESSIONS, archived);
+
+  const nextDateISO = addDaysISO(session.dateISO, 14);
+  setSessionPhase({
+    status: "waiting",
+    seedRetired: true,
+    nextDateISO,
+    nextWeekLabel: formatWeekLabel(nextDateISO),
+    previousSessionId: session.id,
+    lastTemplate: {
+      venueId: session.venueId || "",
+      venueName: venue.name || "",
+      venueAddress: venue.address || "",
+      mapsUrl: venue.mapsUrl || "",
+      time: session.time || "17:00",
+      pricePerPerson: session.pricePerPerson,
+      courtTotalPrice: session.courtTotalPrice,
+      courts: session.courts || 1,
+      courtsNote: session.courtsNote || "indoor",
+      notes: session.notes || "",
+      whatsappUrl: session.whatsappUrl || ""
+    }
+  });
+
+  try {
+    localStorage.removeItem(LS_KEYS.LIVE_SESSION);
+  } catch (e) { /* ignore */ }
+
+  return { ok: true, nextDateISO, nextWeekLabel: formatWeekLabel(nextDateISO), snapshot };
+}
+
+/** After waiting, create the next live week from Admin form fields. */
+function activateNextWeek(fields) {
+  const phase = getSessionPhase();
+  const tpl = phase.lastTemplate || {};
+  const dateISO = (fields.dateISO || phase.nextDateISO || addDaysISO(todayISO(), 14)).toString();
+  const id = "session-" + dateISO + "-" + Date.now().toString(36);
+  const live = {
+    id,
+    isCurrent: true,
+    weekLabel: formatWeekLabel(dateISO),
+    dateISO,
+    time: (fields.time || tpl.time || "17:00").toString(),
+    venueId: fields.venueId || tpl.venueId || "",
+    venueName: (fields.venueName || tpl.venueName || "").toString().trim(),
+    venueAddress: (fields.venueAddress || tpl.venueAddress || "").toString().trim(),
+    mapsUrl: (fields.mapsUrl || tpl.mapsUrl || "").toString().trim(),
+    pricePerPerson: fields.pricePerPerson != null && fields.pricePerPerson !== ""
+      ? Number(fields.pricePerPerson)
+      : tpl.pricePerPerson,
+    courtTotalPrice: fields.courtTotalPrice != null && fields.courtTotalPrice !== ""
+      ? Number(fields.courtTotalPrice)
+      : tpl.courtTotalPrice,
+    courts: fields.courts ? Number(fields.courts) : (tpl.courts || 1),
+    courtsNote: (fields.courtsNote || tpl.courtsNote || "indoor").toString(),
+    notes: (fields.notes != null ? fields.notes : (tpl.notes || "")).toString(),
+    whatsappUrl: (fields.whatsappUrl != null ? fields.whatsappUrl : (tpl.whatsappUrl || "")).toString(),
+    attendeeIds: []
+  };
+  writeJSON(LS_KEYS.LIVE_SESSION, live);
+  setAttendance(id, []);
+  setSessionPhase({ status: "live", seedRetired: true });
+  return live;
 }
 
 /* ============================== Mutations ============================== */
@@ -338,6 +485,13 @@ function deletePlayer(playerId) {
 }
 
 function setSessionOverride(sessionId, patch) {
+  const live = readJSON(LS_KEYS.LIVE_SESSION, null);
+  if (live && live.id === sessionId) {
+    const next = { ...live, ...patch };
+    if (patch.dateISO) next.weekLabel = formatWeekLabel(patch.dateISO);
+    writeJSON(LS_KEYS.LIVE_SESSION, next);
+    return;
+  }
   const overrides = readJSON(LS_KEYS.SESSION_OVERRIDES, {});
   overrides[sessionId] = { ...(overrides[sessionId] || {}), ...patch };
   writeJSON(LS_KEYS.SESSION_OVERRIDES, overrides);
@@ -692,6 +846,22 @@ function nameBadgesHtml(player) {
 
 function renderHome() {
   const session = getCurrentSession();
+  const phase = getSessionPhase();
+
+  if (!session && phase.status === "waiting") {
+    const nextLabel = phase.nextWeekLabel || formatWeekLabel(phase.nextDateISO || "");
+    const nextLong = phase.nextDateISO ? formatDate(phase.nextDateISO) : "TBD";
+    return `
+      <section class="view view-home">
+        <div class="hero-card see-you-card">
+          <p class="eyebrow">Biweekly padel</p>
+          <h2 class="hero-title">See you in 2 weeks</h2>
+          <p class="see-you-next">Next session: <strong>${escHtml(nextLabel)}</strong></p>
+          <p class="muted">${escHtml(nextLong)}</p>
+          <p class="muted">We play on Thursdays every 2 weeks.</p>
+        </div>
+      </section>`;
+  }
 
   if (!session) {
     return `
@@ -985,7 +1155,7 @@ function renderHistory() {
         <div class="view-header"><h2>Session history</h2></div>
         <div class="empty-state">
           <h2>No past sessions yet</h2>
-          <p>Once a week has passed, it'll show up here with who played and their levels at the time.</p>
+          <p>When the week is done, organizers tap <strong>Save week to history</strong> in Admin.</p>
         </div>
       </section>`;
   }
@@ -1001,7 +1171,12 @@ function renderHistory() {
 
 function renderHistoryCard(session) {
   const venue = resolveSessionVenue(session);
-  const attendees = (session.attendeeIds || []).map(id => getPlayerById(id)).filter(Boolean);
+  const attendees = (session.attendeeSnapshots && session.attendeeSnapshots.length)
+    ? session.attendeeSnapshots
+    : (session.attendeeIds || []).map(id => getPlayerById(id)).filter(Boolean);
+  const courtsLine = session.courts
+    ? `${session.courts}${session.courtsNote ? ` (${session.courtsNote})` : ""}`
+    : "?";
   return `
     <li class="card history-card">
       <div class="history-card-header">
@@ -1011,7 +1186,8 @@ function renderHistoryCard(session) {
       <dl class="session-facts session-facts--compact">
         <div><dt>Venue</dt><dd>${venue.name ? escHtml(venue.name) : "Unknown"}${venue.mapsUrl ? ` <a href="${escHtml(venue.mapsUrl)}" target="_blank" rel="noopener">Map</a>` : ""}</dd></div>
         <div><dt>Price</dt><dd>${session.pricePerPerson ? `&euro;${escHtml(session.pricePerPerson)}/person` : "TBD"}</dd></div>
-        <div><dt>Courts</dt><dd>${escHtml(session.courts || "?")}</dd></div>
+        <div><dt>Courts</dt><dd>${escHtml(courtsLine)}</dd></div>
+        <div><dt>Time</dt><dd>${escHtml(session.time || "TBD")}</dd></div>
       </dl>
       ${attendees.length ? `
         <ul class="attendee-list attendee-list--compact">
@@ -1061,12 +1237,64 @@ function attachAdminLockHandlers() {
 
 function renderAdmin() {
   const session = getCurrentSession();
+  const phase = getSessionPhase();
   const players = getAllPlayers().sort((a, b) => a.name.localeCompare(b.name));
   const venue = session ? resolveSessionVenue(session) : { name: "", address: "", mapsUrl: "" };
+  const tpl = phase.lastTemplate || {};
+  const setupVenue = {
+    name: tpl.venueName || "",
+    address: tpl.venueAddress || "",
+    mapsUrl: tpl.mapsUrl || ""
+  };
 
-  const sessionForm = !session
-    ? `<div class="empty-state"><h2>No session set for this week yet</h2></div>`
-    : `
+  let sessionForm;
+  if (phase.status === "waiting") {
+    const nextDate = phase.nextDateISO || "";
+    sessionForm = `
+      <form id="admin-next-week-form" class="card stacked-form">
+        <h3>Set up next week</h3>
+        <p class="muted">Home is showing &ldquo;See you in 2 weeks&rdquo; until you publish the next Thursday (${escHtml(phase.nextWeekLabel || nextDate)}).</p>
+
+        <label for="admin-venue-name">Venue name</label>
+        <input id="admin-venue-name" name="venueName" type="text" required maxlength="120" placeholder="e.g. Plus Padel Indoor" value="${escHtml(setupVenue.name)}">
+
+        <label for="admin-venue-address">Address (optional)</label>
+        <input id="admin-venue-address" name="venueAddress" type="text" maxlength="200" value="${escHtml(setupVenue.address)}">
+
+        <label for="admin-maps-url">Google Maps link</label>
+        <input id="admin-maps-url" name="mapsUrl" type="url" maxlength="500" value="${escHtml(setupVenue.mapsUrl)}">
+
+        <label for="admin-date">Date</label>
+        <input id="admin-date" name="dateISO" type="date" required value="${escHtml(nextDate)}">
+
+        <label for="admin-time">Time</label>
+        <input id="admin-time" name="time" type="time" value="${escHtml(tpl.time || "17:00")}">
+
+        <label for="admin-price">Price per person (&euro;)</label>
+        <input id="admin-price" name="pricePerPerson" type="number" min="0" step="0.5" value="${escHtml(tpl.pricePerPerson || "")}">
+
+        <label for="admin-court-total">Court total price (&euro;, optional)</label>
+        <input id="admin-court-total" name="courtTotalPrice" type="number" min="0" step="0.5" value="${escHtml(tpl.courtTotalPrice || "")}">
+
+        <label for="admin-courts">Courts booked</label>
+        <input id="admin-courts" name="courts" type="number" min="1" max="8" value="${escHtml(tpl.courts || 1)}">
+
+        <label for="admin-whatsapp">WhatsApp link (optional)</label>
+        <input id="admin-whatsapp" name="whatsappUrl" type="url" value="${escHtml(tpl.whatsappUrl || "")}">
+
+        <label for="admin-notes">Notes</label>
+        <textarea id="admin-notes" name="notes" rows="3">${escHtml(tpl.notes || "")}</textarea>
+
+        <div class="admin-actions">
+          <button type="submit" class="btn btn-primary">Publish next week</button>
+          <button type="button" class="btn btn-outline" id="btn-admin-lock">Lock Admin</button>
+        </div>
+        <p id="admin-status" class="rsvp-status" aria-live="polite"></p>
+      </form>`;
+  } else if (!session) {
+    sessionForm = `<div class="empty-state"><h2>No session set for this week yet</h2></div>`;
+  } else {
+    sessionForm = `
       <form id="admin-form" class="card stacked-form">
         <h3>Edit this week</h3>
         <label for="admin-venue-name">Venue name</label>
@@ -1105,7 +1333,15 @@ function renderAdmin() {
           <button type="button" class="btn btn-outline" id="btn-admin-lock">Lock Admin</button>
         </div>
         <p id="admin-status" class="rsvp-status" aria-live="polite"></p>
-      </form>`;
+      </form>
+
+      <div class="card">
+        <h3>End this week</h3>
+        <p class="muted">Saves venue, price, courts and who played into History. Home then shows &ldquo;See you in 2 weeks&rdquo; (next Thursday = date + 14 days).</p>
+        <button type="button" class="btn btn-primary" id="btn-archive-week">Save week to history</button>
+        <p id="archive-status" class="rsvp-status" aria-live="polite"></p>
+      </div>`;
+  }
 
   return `
     <section class="view view-admin">
@@ -1206,6 +1442,48 @@ function attachAdminHandlers() {
   if (lockBtn) {
     lockBtn.addEventListener("click", () => {
       setAdminUnlocked(false);
+      renderView("admin");
+    });
+  }
+
+  const archiveBtn = document.getElementById("btn-archive-week");
+  if (archiveBtn) {
+    archiveBtn.addEventListener("click", () => {
+      const n = ((session && session.attendeeIds) || []).length;
+      const ok = confirm(
+        `Save this week to History${n ? ` (${n} player${n === 1 ? "" : "s"})` : ""} and show "See you in 2 weeks" on Home?`
+      );
+      if (!ok) return;
+      const result = archiveCurrentWeekToHistory();
+      const status = document.getElementById("archive-status");
+      if (!result.ok) {
+        if (status) status.textContent = result.error || "Could not save week.";
+        return;
+      }
+      if (status) status.textContent = `Saved. Next Thursday: ${result.nextWeekLabel}.`;
+      renderView("admin");
+    });
+  }
+
+  const nextWeekForm = document.getElementById("admin-next-week-form");
+  if (nextWeekForm) {
+    nextWeekForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const fd = new FormData(nextWeekForm);
+      activateNextWeek({
+        venueName: (fd.get("venueName") || "").toString().trim(),
+        venueAddress: (fd.get("venueAddress") || "").toString().trim(),
+        mapsUrl: (fd.get("mapsUrl") || "").toString().trim(),
+        dateISO: fd.get("dateISO"),
+        time: fd.get("time"),
+        pricePerPerson: fd.get("pricePerPerson") ? Number(fd.get("pricePerPerson")) : "",
+        courtTotalPrice: fd.get("courtTotalPrice") ? Number(fd.get("courtTotalPrice")) : "",
+        courts: fd.get("courts") ? Number(fd.get("courts")) : 1,
+        whatsappUrl: fd.get("whatsappUrl") || "",
+        notes: fd.get("notes") || ""
+      });
+      const status = document.getElementById("admin-status");
+      if (status) status.textContent = "Next week published. Check Home.";
       renderView("admin");
     });
   }

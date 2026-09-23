@@ -759,3 +759,12 @@ select:focus, input:focus, textarea:focus, button:focus {
   border: 1px solid rgba(15, 23, 42, 0.18);
   resize: vertical;
 }
+
+.see-you-card .hero-title {
+  margin-bottom: 0.5rem;
+}
+
+.see-you-next {
+  font-size: 1.15rem;
+  margin: 0.75rem 0 0.35rem;
+}

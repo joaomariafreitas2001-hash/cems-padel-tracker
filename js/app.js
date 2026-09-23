@@ -45,7 +45,7 @@ function setAdminUnlocked(unlocked) {
 /* ============================== Cache / storage migration ============================== */
 
 /** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
-const STORAGE_EPOCH = "5";
+const STORAGE_EPOCH = "6";
 (function migrateStorageEpoch() {
   try {
     const key = "cemspadel_storageEpoch_v1";
@@ -629,8 +629,6 @@ function nameBadgesHtml(player) {
 
 function renderHome() {
   const session = getCurrentSession();
-  const myId = localStorage.getItem(LS_KEYS.MY_PLAYER_ID) || "";
-  const players = getAllPlayers().filter(p => p.active !== false);
 
   if (!session) {
     return `
@@ -651,12 +649,6 @@ function renderHome() {
     : "";
   const spotsLeft = session.courts ? Math.max(0, session.courts * 4 - attendees.length) : null;
 
-  const isIn = myId && attendees.some(p => p.id === myId);
-
-  const playerOptions = players
-    .map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`)
-    .join("");
-
   return `
     <section class="view view-home">
       <div class="hero-card">
@@ -671,25 +663,12 @@ function renderHome() {
         </dl>
         ${session.notes ? `<p class="session-notes">${escHtml(session.notes)}</p>` : ""}
         ${session.whatsappUrl ? `<a class="btn btn-ghost" href="${escHtml(session.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp group</a>` : ""}
-
-        <div class="rsvp-row">
-          <label for="rsvp-player" class="rsvp-label">I am:</label>
-          <select id="rsvp-player">
-            <option value="">Choose your name&hellip;</option>
-            ${playerOptions}
-          </select>
-          <div class="rsvp-buttons">
-            <button type="button" class="btn btn-primary" id="btn-im-in">I'm in</button>
-            <button type="button" class="btn btn-outline" id="btn-im-out">I'm out</button>
-          </div>
-        </div>
-        <p id="rsvp-status" class="rsvp-status" aria-live="polite">${isIn ? "You're marked as in for this session." : ""}</p>
       </div>
 
       <div class="card">
         <h3>Who's playing (${attendees.length})</h3>
         ${attendees.length === 0
-          ? `<p class="empty-inline">No one signed up yet â€” be the first!</p>`
+          ? `<p class="empty-inline">No one listed yet. Organizers add players in Admin.</p>`
           : `<ul class="attendee-list">
               ${attendees.map(p => `
                 <li class="attendee-item">
@@ -703,44 +682,9 @@ function renderHome() {
 }
 
 function attachHomeHandlers() {
-  const inBtn = document.getElementById("btn-im-in");
-  const outBtn = document.getElementById("btn-im-out");
-  const select = document.getElementById("rsvp-player");
-  const status = document.getElementById("rsvp-status");
-  const session = getCurrentSession();
-
   document.querySelectorAll("[data-nav]").forEach(el => {
     el.addEventListener("click", () => navigate(el.dataset.nav));
   });
-
-  const savedId = localStorage.getItem(LS_KEYS.MY_PLAYER_ID);
-  if (select && savedId) select.value = savedId;
-
-  if (inBtn) {
-    inBtn.addEventListener("click", () => {
-      const id = select.value;
-      if (!id) {
-        status.textContent = "Pick your name from the list first.";
-        return;
-      }
-      localStorage.setItem(LS_KEYS.MY_PLAYER_ID, id);
-      toggleMyAttendance(session.id, id, true);
-      status.textContent = "You're marked as in for this session. Enjoy the game!";
-      renderView("home");
-    });
-  }
-  if (outBtn) {
-    outBtn.addEventListener("click", () => {
-      const id = select.value || savedId;
-      if (!id) {
-        status.textContent = "Pick your name from the list first.";
-        return;
-      }
-      toggleMyAttendance(session.id, id, false);
-      status.textContent = "You're marked as out for this session.";
-      renderView("home");
-    });
-  }
 }
 
 /* ============================== View: Players ============================== */
@@ -857,7 +801,7 @@ function renderBalance() {
         <div class="view-header"><h2>Balance helper</h2></div>
         <div class="empty-state">
           <h2>No attendees yet</h2>
-          <p>Once people mark themselves "I'm in" on Home, come back here to see balanced court groupings.</p>
+          <p>Once organizers mark who is playing in Admin, come back here to see balanced court groupings.</p>
         </div>
       </section>`;
   }
@@ -1110,6 +1054,28 @@ function renderAdmin() {
 
       ${sessionForm}
 
+      ${session ? `
+      <div class="card">
+        <h3>Who's playing this week</h3>
+        <p class="muted">Tick who is in for this session. This list appears on Home and feeds Balance.</p>
+        <form id="attendance-form" class="stacked-form">
+          <ul class="attendee-check-list">
+            ${players.map(p => {
+              const checked = (session.attendeeIds || []).includes(p.id) ? "checked" : "";
+              return `<li class="attendee-check-item">
+                <label>
+                  <input type="checkbox" name="attendee" value="${escHtml(p.id)}" ${checked}>
+                  <span class="name-cell">${nameBadgesHtml(p)}<span>${escHtml(p.name)}</span></span>
+                  ${levelBadge(p.level, { short: true })}
+                </label>
+              </li>`;
+            }).join("")}
+          </ul>
+          <button type="submit" class="btn btn-primary">Save who's playing</button>
+          <p id="attendance-status" class="rsvp-status" aria-live="polite"></p>
+        </form>
+      </div>` : ""}
+
       <div class="card">
         <h3>Add a player</h3>
         <form id="add-player-form" class="stacked-form">
@@ -1172,6 +1138,17 @@ function attachAdminHandlers() {
     lockBtn.addEventListener("click", () => {
       setAdminUnlocked(false);
       renderView("admin");
+    });
+  }
+
+  const attendanceForm = document.getElementById("attendance-form");
+  if (attendanceForm && session) {
+    attendanceForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const ids = [...attendanceForm.querySelectorAll('input[name="attendee"]:checked')].map(el => el.value);
+      setAttendance(session.id, ids);
+      const status = document.getElementById("attendance-status");
+      if (status) status.textContent = `Saved ${ids.length} player${ids.length === 1 ? "" : "s"} for this week.`;
     });
   }
 

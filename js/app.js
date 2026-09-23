@@ -45,7 +45,7 @@ function setAdminUnlocked(unlocked) {
 /* ============================== Cache / storage migration ============================== */
 
 /** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
-const STORAGE_EPOCH = "3";
+const STORAGE_EPOCH = "4";
 (function migrateStorageEpoch() {
   try {
     const key = "cemspadel_storageEpoch_v1";

@@ -24,7 +24,7 @@ const VENUES = [
     name: "Plus Padel Indoor",
     address: "Av. del Carrilet, 219, 08907 L'Hospitalet de Llobregat, Barcelona, Spain",
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Plus+Padel+Indoor+Av.+del+Carrilet+219+L%27Hospitalet+de+Llobregat",
-    defaultPriceNote: "€38 / court (90 min) -> €11 / person incl. €1.50 balls"
+    defaultPriceNote: "90 min session"
   }
 ];
 
@@ -40,7 +40,7 @@ const PLAYERS = [
 // isCurrent: true forces Home/Balance/Admin to use this session.
 const SESSIONS = [
   {
-    id: "session-2026-10-01-v3",
+    id: "session-2026-10-01-v4",
     isCurrent: true,
     weekLabel: "Thu 1 Oct",
     dateISO: "2026-10-01",
@@ -52,7 +52,7 @@ const SESSIONS = [
     pricePerPerson: 11,
     courtTotalPrice: 38,
     courts: 1,
-    notes: "90 minutes (17:00-18:30). €38/court ÷ 4 + €1.50 balls = €11 per person. Bring a racket if you have one.",
+    notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
     attendeeIds: []
   }

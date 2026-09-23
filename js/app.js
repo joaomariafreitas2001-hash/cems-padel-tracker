@@ -19,7 +19,7 @@ const LS_KEYS = {
   PLAYER_LEVELS: "cemspadel_playerLevels_v1",     // { [playerId]: { level:1-3, updatedAt: ISOString } }
   CUSTOM_PLAYERS: "cemspadel_customPlayers_v1",   // [ { id, name, level, active, notes, updatedAt } ]
   SESSION_OVERRIDES: "cemspadel_sessionOverrides_v1", // { [sessionId]: { venueName, venueAddress, mapsUrl, venueId?, dateISO, time, pricePerPerson, courtTotalPrice, courts, notes, whatsappUrl } }
-  ATTENDANCE: "cemspadel_attendance_v1",          // { [sessionId]: [playerId, ...] }
+  ATTENDANCE: "cemspadel_attendance_v2",          // { [sessionId]: [playerId, ...] }
   MY_PLAYER_ID: "cemspadel_myPlayerId_v1",        // string playerId (or "" )
   GROUPINGS: "cemspadel_groupings_v1",            // { [sessionId]: [ [playerId,...], [playerId,...], ... ] }
   PLAYER_HISTORY: "cemspadel_playerHistory_v1",   // { [playerId]: [sessionId, ...] }
@@ -149,7 +149,9 @@ function getSessionWithOverrides(sessionId) {
   const overrides = readJSON(LS_KEYS.SESSION_OVERRIDES, {});
   const attendanceMap = readJSON(LS_KEYS.ATTENDANCE, {});
   const merged = { ...base, ...(overrides[sessionId] || {}) };
-  merged.attendeeIds = attendanceMap[sessionId] || base.attendeeIds || [];
+  merged.attendeeIds = Object.prototype.hasOwnProperty.call(attendanceMap, sessionId)
+    ? attendanceMap[sessionId]
+    : (base.attendeeIds || []);
   return merged;
 }
 

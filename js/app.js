@@ -1057,6 +1057,12 @@ function renderPlayers() {
         <p class="muted">View-only roster (Name, Level, Nationality, Home School, Sessions). Organizers edit in <button type="button" class="link-button" data-nav="admin">Admin</button>.</p>
       </div>
 
+      <div class="card roster-signup-note">
+        <h3>Join the roster</h3>
+        <p>Add your credentials in the sign-up sheet. An administrator will update the roster in due time.</p>
+        <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1zopfyVnHYlHeVkWVpefEuHNoLu77uN62W9HRXonpyGs/edit?usp=sharing" target="_blank" rel="noopener">Open sign-up sheet</a>
+      </div>
+
       <div class="level-legend card">
         <h3>Level legend</h3>
         <ul class="legend-list">

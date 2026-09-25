@@ -869,3 +869,7 @@ select:focus, input:focus, textarea:focus, button:focus {
 .venue-amenities {
   margin: 0.35rem 0 0;
 }
+
+.roster-signup-note p {
+  margin: 0 0 1rem;
+}

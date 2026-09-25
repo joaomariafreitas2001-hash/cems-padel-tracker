@@ -44,7 +44,8 @@ const PLAYERS = [
   { id: "p-nastasia", name: "Nastasia", level: 1, active: true, nationality: "German", homeSchool: "ESADE" },
   { id: "p-fangjia", name: "Fangjia", level: 1, active: true, nationality: "Chinese", homeSchool: "SSE" },
   { id: "p-guillaume", name: "Guillaume", level: 3, active: true, nationality: "Belgian", homeSchool: "LSM" },
-  { id: "p-andre", name: "André Vicentini", level: 3, active: true, nationality: "Italian", homeSchool: "CBS" }
+  { id: "p-andre", name: "André Vicentini", level: 3, active: true, nationality: "Italian", homeSchool: "CBS" },
+  { id: "p-luca", name: "Luca Mueller-Kengelbach", level: 2, active: true, nationality: "German", homeSchool: "ESADE" }
 ];
 
 // Only the live week is seeded. History stays empty until real past weeks are added.

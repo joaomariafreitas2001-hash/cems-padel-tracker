@@ -66,6 +66,6 @@ const SESSIONS = [
     courtsNote: "indoor",
     notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
-    attendeeIds: []
+        attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris"]
   }
 ];

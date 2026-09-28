@@ -46,7 +46,7 @@ const PLAYERS = [
   { id: "p-guillaume", name: "Guillaume", level: 3, active: true, nationality: "Belgian", homeSchool: "LSM" },
   { id: "p-andre", name: "André Vicentini", level: 3, active: true, nationality: "Italian", homeSchool: "CBS" },
   { id: "p-luca", name: "Luca Mueller-Kengelbach", level: 1, active: true, nationality: "German", homeSchool: "ESADE" },
-  { id: "p-hassan", name: "Hassan Haoui", level: 1, active: true, nationality: "Swiss", homeSchool: "ESADE" },,
+  { id: "p-hassan", name: "Hassan Haoui", level: 1, active: true, nationality: "Swiss", homeSchool: "ESADE" },
   { id: "p-jaume", name: "Jaume Duch Giménez", level: 2, active: true, nationality: "Spanish", homeSchool: "ESADE" }
 ];
 

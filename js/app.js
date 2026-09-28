@@ -1238,7 +1238,8 @@ function renderCourtCard(group, index) {
         ${players.length
           ? players.map(p => `
           <li>
-            <span>${escHtml(p.name)}</span>
+            <span class="name-cell">${nameBadgesHtml(p)}<span>${escHtml(p.name)}</span></span>
+            ${p.nationality ? `<span class="muted court-nationality">${escHtml(p.nationality)}</span>` : ""}
             ${levelBadge(p.level, { short: true })}
           </li>`).join("")
           : `<li class="muted court-open-slot">Open slot</li>`}

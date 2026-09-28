@@ -47,7 +47,8 @@ const PLAYERS = [
   { id: "p-andre", name: "André Vicentini", level: 3, active: true, nationality: "Italian", homeSchool: "CBS" },
   { id: "p-luca", name: "Luca Mueller-Kengelbach", level: 1, active: true, nationality: "German", homeSchool: "ESADE" },
   { id: "p-hassan", name: "Hassan Haoui", level: 1, active: true, nationality: "Swiss", homeSchool: "ESADE" },
-  { id: "p-jaume", name: "Jaume Duch Giménez", level: 2, active: true, nationality: "Spanish", homeSchool: "ESADE" }
+  { id: "p-jaume", name: "Jaume Duch Giménez", level: 2, active: true, nationality: "Spanish", homeSchool: "ESADE" },
+  { id: "p-siddharth", name: "Siddharth", level: 1, active: true, nationality: "Indian", homeSchool: "N/A" },
 ];
 
 // Only the live week is seeded. History stays empty until real past weeks are added.
@@ -69,6 +70,6 @@ const SESSIONS = [
     courtsNote: "indoor",
     notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
-            attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris", "p-guillaume"]
+                attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris", "p-guillaume", "p-hassan", "p-jaume", "p-siddharth"]
   }
 ];

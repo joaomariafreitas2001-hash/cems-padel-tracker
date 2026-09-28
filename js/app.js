@@ -50,7 +50,7 @@ function setAdminUnlocked(unlocked) {
 /* ============================== Cache / storage migration ============================== */
 
 /** Wipe stale session/attendance when seed data changes (stops Drop Shot ghost weeks). */
-const STORAGE_EPOCH = "26";
+const STORAGE_EPOCH = "29";
 (function migrateStorageEpoch() {
   try {
     const key = "cemspadel_storageEpoch_v1";
@@ -647,7 +647,13 @@ function setGroupings(sessionId, groups) {
 
 function getGroupings(sessionId) {
   const map = readJSON(LS_KEYS.GROUPINGS, {});
-  return map[sessionId] || null;
+  if (map[sessionId]) return map[sessionId];
+  // Fall back to groupings seeded on the session (deployed court selection).
+  const session = getSessionWithOverrides(sessionId) || (typeof SESSIONS !== "undefined" ? SESSIONS.find(s => s.id === sessionId) : null);
+  if (session && session.groupings && session.groupings.groups) {
+    return session.groupings;
+  }
+  return null;
 }
 
 /* ============================== Balance helper algorithm ============================== */

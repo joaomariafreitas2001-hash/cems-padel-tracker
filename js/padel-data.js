@@ -70,6 +70,15 @@ const SESSIONS = [
     courtsNote: "indoor",
     notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
-                attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris", "p-guillaume", "p-hassan", "p-jaume", "p-siddharth"]
+    groupings: {
+      groups: [
+      ["p-ameer", "p-hassan", "p-nastasia", "p-siddharth"],
+      ["p-andre", "p-guillaume", "p-joao", "p-matteo"],
+      ["p-linus", "p-chris", "p-jaume", "p-niki"]
+      ],
+      _forIds: "p-ameer,p-andre,p-chris,p-guillaume,p-hassan,p-jaume,p-joao,p-linus,p-matteo,p-nastasia,p-niki,p-siddharth",
+      _courts: 3
+    },
+    attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris", "p-guillaume", "p-hassan", "p-jaume", "p-siddharth"]
   }
 ];

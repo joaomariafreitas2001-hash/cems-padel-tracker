@@ -874,13 +874,40 @@ select:focus, input:focus, textarea:focus, button:focus {
   margin: 0 0 1rem;
 }
 
-.court-player-list li {
-  display: flex;
+/* Balance court player rows: badges | name+nationality | level */
+.court-player-list li.court-player-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 10px 12px;
+  justify-content: stretch;
 }
 
-.court-nationality {
-  font-size: 0.85rem;
+.court-player-row .name-badges {
+  align-self: center;
 }
+
+.court-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.court-player-name {
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.court-player-nationality {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.court-player-row .level-badge {
+  flex-shrink: 0;
+  justify-self: end;
+  align-self: center;
+}
+

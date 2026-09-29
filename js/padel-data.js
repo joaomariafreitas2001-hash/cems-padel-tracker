@@ -38,12 +38,12 @@ const PLAYERS = [
   { id: "p-chris", name: "Chris Imhoff", level: 2, active: true, nationality: "German", homeSchool: "ESADE" },
   { id: "p-mark", name: "Mark Erhan", level: 2, active: true, nationality: "German", homeSchool: "SSE" },
   { id: "p-matteo", name: "Matteo Guardamagna", level: 3, active: true, nationality: "Italian", homeSchool: "ESADE" },
-  { id: "p-ameer", name: "Ameer", level: 1, active: true, nationality: "Indian", homeSchool: "NUS" },
+  { id: "p-ameer", name: "Ameer Batcha", level: 1, active: true, nationality: "Indian", homeSchool: "NUS" },
   { id: "p-linus", name: "Linus", level: 3, active: true, nationality: "German", homeSchool: "WU" },
   { id: "p-niki", name: "Niki", level: 2, active: true, nationality: "German", homeSchool: "WU" },
   { id: "p-nastasia", name: "Nastasia", level: 1, active: true, nationality: "German", homeSchool: "ESADE" },
   { id: "p-fangjia", name: "Fangjia", level: 1, active: true, nationality: "Chinese", homeSchool: "SSE" },
-  { id: "p-guillaume", name: "Guillaume", level: 3, active: true, nationality: "Belgian", homeSchool: "LSM" },
+  { id: "p-guillaume", name: "Guillaume Jacob", level: 3, active: true, nationality: "Belgian", homeSchool: "LSM" },
   { id: "p-andre", name: "André Vicentini", level: 3, active: true, nationality: "Italian", homeSchool: "CBS" },
   { id: "p-luca", name: "Luca Mueller-Kengelbach", level: 1, active: true, nationality: "German", homeSchool: "ESADE" },
   { id: "p-hassan", name: "Hassan Haoui", level: 1, active: true, nationality: "Swiss", homeSchool: "ESADE" },
@@ -70,15 +70,15 @@ const SESSIONS = [
     courtsNote: "indoor",
     notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
-    groupings: {
+        groupings: {
       groups: [
       ["p-ameer", "p-hassan", "p-nastasia", "p-siddharth"],
-      ["p-andre", "p-guillaume", "p-joao", "p-matteo"],
-      ["p-linus", "p-chris", "p-jaume", "p-niki"]
+      ["p-andre", "p-guillaume", "p-joao", "p-linus"],
+      ["p-mark", "p-chris", "p-jaume", "p-niki"]
       ],
-      _forIds: "p-ameer,p-andre,p-chris,p-guillaume,p-hassan,p-jaume,p-joao,p-linus,p-matteo,p-nastasia,p-niki,p-siddharth",
+      _forIds: "p-ameer,p-andre,p-chris,p-guillaume,p-hassan,p-jaume,p-joao,p-linus,p-mark,p-nastasia,p-niki,p-siddharth",
       _courts: 3
     },
-    attendeeIds: ["p-joao", "p-ameer", "p-andre", "p-matteo", "p-niki", "p-linus", "p-nastasia", "p-chris", "p-guillaume", "p-hassan", "p-jaume", "p-siddharth"]
+    attendeeIds: ["p-joao", "p-mark", "p-linus", "p-ameer", "p-niki", "p-jaume", "p-hassan", "p-andre", "p-nastasia", "p-chris", "p-siddharth", "p-guillaume"]
   }
 ];

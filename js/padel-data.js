@@ -49,6 +49,7 @@ const PLAYERS = [
   { id: "p-hassan", name: "Hassan Haoui", level: 1, active: true, nationality: "Swiss", homeSchool: "ESADE" },
   { id: "p-jaume", name: "Jaume Duch Giménez", level: 2, active: true, nationality: "Spanish", homeSchool: "ESADE" },
   { id: "p-siddharth", name: "Siddharth", level: 1, active: true, nationality: "Indian", homeSchool: "N/A" },
+  { id: "p-andres", name: "Andres", level: 1, active: true, nationality: "", homeSchool: "" },
 ];
 
 // Only the live week is seeded. History stays empty until real past weeks are added.
@@ -70,15 +71,15 @@ const SESSIONS = [
     courtsNote: "indoor",
     notes: "90 minutes (17:00-18:30). Bring a racket if you have one.",
     whatsappUrl: "",
-        groupings: {
+            groupings: {
       groups: [
       ["p-ameer", "p-hassan", "p-nastasia", "p-siddharth"],
-      ["p-andre", "p-guillaume", "p-joao", "p-linus"],
-      ["p-mark", "p-chris", "p-jaume", "p-niki"]
+      ["p-joao", "p-linus", "p-guillaume", "p-niki"],
+      ["p-andres", "p-mark", "p-chris", "p-jaume"]
       ],
-      _forIds: "p-ameer,p-andre,p-chris,p-guillaume,p-hassan,p-jaume,p-joao,p-linus,p-mark,p-nastasia,p-niki,p-siddharth",
+      _forIds: "p-ameer,p-andres,p-chris,p-guillaume,p-hassan,p-jaume,p-joao,p-linus,p-mark,p-nastasia,p-niki,p-siddharth",
       _courts: 3
     },
-    attendeeIds: ["p-joao", "p-mark", "p-linus", "p-ameer", "p-niki", "p-jaume", "p-hassan", "p-andre", "p-nastasia", "p-chris", "p-siddharth", "p-guillaume"]
+    attendeeIds: ["p-joao", "p-mark", "p-linus", "p-ameer", "p-niki", "p-jaume", "p-hassan", "p-andres", "p-nastasia", "p-chris", "p-siddharth", "p-guillaume"]
   }
 ];
